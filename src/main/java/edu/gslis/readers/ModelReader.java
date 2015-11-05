@@ -19,6 +19,9 @@ public class ModelReader {
 			Scanner scanner = new Scanner(file);
 			while (scanner.hasNextLine()) {
 				String line = scanner.nextLine();
+				if (line.length() <= 1) {
+					continue;
+				}
 				String[] parts = line.split(" ");
 
 				double score = Double.parseDouble(parts[0]);
@@ -29,6 +32,7 @@ public class ModelReader {
 			scanner.close();
 		} catch (FileNotFoundException e) {
 			System.err.println("Couldn't find model file: "+file.getName());
+			System.err.println(file.getAbsolutePath());
 		}
 		return termScores;
 	}

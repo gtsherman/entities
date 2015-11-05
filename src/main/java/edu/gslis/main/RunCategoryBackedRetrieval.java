@@ -11,8 +11,7 @@ import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
-import edu.gslis.queries.GQueries;
-import edu.gslis.queries.GQueriesFactory;
+import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
@@ -32,11 +31,14 @@ public class RunCategoryBackedRetrieval {
 		if (config.get("stoplist") != null)
 			stopper = new Stopper(config.get("stoplist"));
 		
-		GQueries queries = GQueriesFactory.getGQueries(config.get("queries"));
+		GQueriesJsonImpl queries = new GQueriesJsonImpl();
+		queries.read(config.get("queries"));
 		
+		String entityCategories = config.get("entity-categories");
+
 		String categoryModelsDir = config.get("category-models-directory");
 		String entityDocumentsDir = config.get("entity-documents-directory");
-		CategoryProbability cp = new CategoryProbability(categoryModelsDir, entityDocumentsDir);
+		CategoryProbability cp = new CategoryProbability(categoryModelsDir, entityDocumentsDir, entityCategories);
 		
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));

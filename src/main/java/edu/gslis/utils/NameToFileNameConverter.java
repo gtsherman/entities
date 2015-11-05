@@ -1,9 +1,14 @@
 package edu.gslis.utils;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class NameToFileNameConverter {
 	
 	private String name;
 	
+	public List<String> TO_BE_REPLACED = new ArrayList<String>(Arrays.asList(".", "/", "\\"));
 	public String REPLACEMENT_CHAR = "_";
 	
 	public NameToFileNameConverter(String name) {
@@ -19,15 +24,16 @@ public class NameToFileNameConverter {
 	}
 	
 	public String getFirstChar() {
-		if (this.name.length() == 0) {
-			return this.REPLACEMENT_CHAR;
-		}
-		return Character.toString(this.name.charAt(0));
+		return this.getChar(0);
 	}
 	
 	public String getSecondChar() {
-		if (this.name.length() > 1 && this.name.charAt(1) != '/') {
-			return Character.toString(this.name.charAt(1));
+		return this.getChar(1);
+	}
+	
+	private String getChar(int i) {
+		if (this.name.length() > i && !this.TO_BE_REPLACED.contains(this.name.charAt(i))) {
+			return Character.toString(this.name.charAt(i));
 		}
 		return this.REPLACEMENT_CHAR;
 	}

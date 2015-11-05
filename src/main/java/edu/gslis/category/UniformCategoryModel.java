@@ -62,10 +62,18 @@ public class UniformCategoryModel implements CategoryModel {
 		for (Set<String> pageSet : categoryPages.values()) {
 			for (String title : pageSet) {
 				System.err.println("\tCategory contains page: "+title);
-				SearchHit page = this.index.getSearchHit(title, this.stopper);
-				page.setDocno(title);
-				page.setScore(1.0);
-				pages.add(page);
+				if (title.startsWith("Super_")) {
+					System.err.println("Skipping because of weird Super issue");
+					continue;
+				}
+				try {
+					SearchHit page = this.index.getSearchHit(title, this.stopper);
+					page.setDocno(title);
+					page.setScore(1.0);
+					pages.add(page);
+				} catch (Exception e) {
+					System.err.println("\t\tIssue with "+title);
+				}
 			}
 		}
 		
