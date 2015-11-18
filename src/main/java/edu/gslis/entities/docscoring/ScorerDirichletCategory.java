@@ -37,6 +37,7 @@ public class ScorerDirichletCategory extends QueryDocScorer {
 			terms.add(qit.next());
 		}
 
+		this.catProb.setDocument(doc);
 		Map<String, Double> termProbs = this.catProb.getProbability(terms);
 
 		double logLikelihood = 0.0;
