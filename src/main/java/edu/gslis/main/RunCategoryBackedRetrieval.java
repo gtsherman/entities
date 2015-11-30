@@ -67,6 +67,7 @@ public class RunCategoryBackedRetrieval {
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
+
 			if (stopper != null)
 				query.applyStopper(stopper);
 			scorer.setQuery(query);
