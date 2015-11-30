@@ -14,14 +14,19 @@ public class DocumentEntities extends AbstractReader {
 	
 	@Override
 	public void readFile(File file) {
-		Set<String> entities = new HashSet<String>();
+		System.err.println("Reading file "+file.getAbsolutePath());
+		entities = new HashSet<String>();
 		try {
 			Scanner scanner = new Scanner(file);
 			while (scanner.hasNextLine()) {
 				String line = scanner.nextLine();
+				if (line.length() < 1) {
+					continue;
+				}
 				String[] parts = line.split("\\t");
 
-				entities.add(parts[parts.length-1]);
+				String entity = parts[parts.length-1];
+				entities.add(entity);
 			}
 			scanner.close();
 		} catch (FileNotFoundException e) {

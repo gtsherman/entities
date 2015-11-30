@@ -31,31 +31,36 @@ public class ScorerDirichletCategory extends QueryDocScorer {
 	}
 
 	public double score(SearchHit doc) {
-		List<String> terms = new ArrayList<String>();
-		Iterator<String> qit = gQuery.getFeatureVector().iterator();
-		while (qit.hasNext()) {
-			terms.add(qit.next());
-		}
+		try {
+			List<String> terms = new ArrayList<String>();
+			Iterator<String> qit = gQuery.getFeatureVector().iterator();
+			while (qit.hasNext()) {
+				terms.add(qit.next());
+			}
 
-		this.catProb.setDocument(doc);
-		Map<String, Double> termProbs = this.catProb.getProbability(terms);
+			this.catProb.setDocument(doc);
+			Map<String, Double> termProbs = this.catProb.getProbability(terms);
 
-		double logLikelihood = 0.0;
-		Iterator<String> queryIterator = gQuery.getFeatureVector().iterator();
-		while(queryIterator.hasNext()) {
-			String feature = queryIterator.next();
-			double docFreq = doc.getFeatureVector().getFeatureWeight(feature);
-			double docLength = doc.getLength();
-			double categoryProb = termProbs.get(feature);
-			System.err.println("\t\t\tProbability for term "+feature+": "+categoryProb);
-			double collectionProb = (EPSILON + collectionStats.termCount(feature)) / collectionStats.getTokCount();
-			double pr = (docFreq + 
-					paramTable.get(PARAMETER_NAME)*(paramTable.get(BACKGROUND_MIX)*categoryProb + (1-paramTable.get(BACKGROUND_MIX))*collectionProb)) / 
-					(docLength + paramTable.get(PARAMETER_NAME));
-			double queryWeight = gQuery.getFeatureVector().getFeatureWeight(feature);
-			logLikelihood += queryWeight * Math.log(pr);
+			double logLikelihood = 0.0;
+			Iterator<String> queryIterator = gQuery.getFeatureVector().iterator();
+			while(queryIterator.hasNext()) {
+				String feature = queryIterator.next();
+				double docFreq = doc.getFeatureVector().getFeatureWeight(feature);
+				double docLength = doc.getLength();
+				double categoryProb = termProbs.get(feature);
+				System.err.println("\t\t\tProbability for term "+feature+": "+categoryProb);
+				double collectionProb = (EPSILON + collectionStats.termCount(feature)) / collectionStats.getTokCount();
+				double pr = (docFreq + 
+						paramTable.get(PARAMETER_NAME)*(paramTable.get(BACKGROUND_MIX)*categoryProb + (1-paramTable.get(BACKGROUND_MIX))*collectionProb)) / 
+						(docLength + paramTable.get(PARAMETER_NAME));
+				double queryWeight = gQuery.getFeatureVector().getFeatureWeight(feature);
+				logLikelihood += queryWeight * Math.log(pr);
+			}
+			return logLikelihood;
+		} catch (Exception e) {
+			e.printStackTrace();
+			return 0.0;
 		}
-		return logLikelihood;
 	}
 
 }

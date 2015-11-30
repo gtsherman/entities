@@ -31,13 +31,16 @@ public class CategoryModel extends AbstractReader {
 			}
 			scanner.close();
 		} catch (FileNotFoundException e) {
-			System.err.println("Couldn't find model file: "+file.getName());
-			System.err.println(file.getAbsolutePath());
+			System.err.println("Couldn't find model file: "+file.getAbsolutePath());
 		}
 	}
 	
 	public double getScore(String term) {
-		return this.termScores.get(term);
+		Double score = this.termScores.get(term);
+		if (score == null) {
+			return 0.0;
+		}
+		return score;
 	}
 
 }

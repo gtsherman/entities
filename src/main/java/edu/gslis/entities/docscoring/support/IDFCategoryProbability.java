@@ -46,12 +46,15 @@ public class IDFCategoryProbability implements CategoryProbability {
 		// Iterate through entities in the document
 		// (the document has been specified in the DocumentEntities object)
 		for (String entity : de.getEntities()) {
+			System.err.println("\tEntity: "+entity);
 
 			// Find the IDF category for this entity
 			String cat = "";
 			int catSize = Integer.MAX_VALUE;
 			for (String category : ec.getCategories(entity)) {
+				System.err.println("\t\tCategory: "+category);
 				Set<String> catEntities = ec.getEntities(category);
+				System.err.println("\t\t\tSize:"+catEntities.size());
 				if (catEntities.size() < catSize) {
 					cat = category;
 					catSize = catEntities.size();
@@ -60,6 +63,7 @@ public class IDFCategoryProbability implements CategoryProbability {
 			
 			// Find the term probabilities in the IDF category
 			CategoryNameToPathConverter cp = new CategoryNameToPathConverter(cat);
+			System.err.println("\tReading least encompassing category model file: "+cat);
 			cm.readFileRelative(cp.getPath());
 			for (String term : terms) {
 				double score = cm.getScore(term);

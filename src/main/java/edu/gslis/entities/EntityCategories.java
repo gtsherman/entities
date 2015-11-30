@@ -17,6 +17,7 @@ public class EntityCategories extends AbstractReader {
 
 	@Override
 	public void readFile(File file) {
+		System.err.println("Reading entity categories file: "+file.getAbsolutePath());
 		entityCategories = new HashMap<String, Set<String>>();
 		categoryEntities = new HashMap<String, Set<String>>();
 
@@ -24,7 +25,7 @@ public class EntityCategories extends AbstractReader {
 			Scanner scanner = new Scanner(file);
 			while (scanner.hasNextLine()) {
 				String line = scanner.nextLine();
-				String[] parts = line.split("|");
+				String[] parts = line.split("\\|");
 
 				String entity = parts[0];
 				entityCategories.put(entity, new HashSet<String>());
@@ -40,17 +41,26 @@ public class EntityCategories extends AbstractReader {
 				}
 			}
 			scanner.close();
+			System.err.println("Read "+entityCategories.keySet().size()+" entities");
 		} catch (FileNotFoundException e) {
 			System.err.println("Couldn't find file: "+file.getName());
 		}
 	}
 	
 	public Set<String> getCategories(String entity) {
-		return this.entityCategories.get(entity);
+		Set<String> categories = this.entityCategories.get(entity);
+		if (categories == null) {
+			return new HashSet<String>();
+		}
+		return categories;
 	}
 	
 	public Set<String> getEntities(String category) {
-		return this.categoryEntities.get(category);
+		Set<String> entities = this.categoryEntities.get(category);
+		if (entities == null) {
+			return new HashSet<String>();
+		}
+		return entities;
 	}
 
 }
