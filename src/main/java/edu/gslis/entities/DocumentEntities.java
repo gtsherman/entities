@@ -29,6 +29,7 @@ public class DocumentEntities extends AbstractReader {
 				entities.add(entity);
 			}
 			scanner.close();
+			System.err.println("Found TSV file: "+file.getName());
 		} catch (FileNotFoundException e) {
 			System.err.println("Couldn't find TSV file: "+file.getName());
 		}

@@ -16,6 +16,7 @@ import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
+import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
 public class RunBaselineRetrieval {
@@ -54,7 +55,9 @@ public class RunBaselineRetrieval {
 			Iterator<SearchHit> hitIt = hits.iterator();
 			while (hitIt.hasNext()) {
 				SearchHit hit = hitIt.next();
-				hit.setFeatureVector(index.getDocVector(hit.getDocno(), null));
+				FeatureVector dv = index.getDocVector(hit.getDocID(), null);
+				hit.setFeatureVector(dv);
+				hit.setLength(dv.getLength());
 				hit.setScore(scorer.score(hit));
 			}
 			hits.rank();

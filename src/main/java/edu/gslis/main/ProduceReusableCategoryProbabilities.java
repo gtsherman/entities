@@ -1,30 +1,28 @@
 package edu.gslis.main;
 
-import java.io.BufferedWriter;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.DocumentEntities;
 import edu.gslis.entities.EntityCategories;
 import edu.gslis.entities.categories.CategoryModel;
-import edu.gslis.entities.docscoring.ScorerDirichletCategory;
 import edu.gslis.entities.docscoring.support.CategoryProbability;
 import edu.gslis.entities.utils.Configuration;
 import edu.gslis.entities.utils.SimpleConfiguration;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
-import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
-import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
-public class RunCategoryBackedRetrieval {
+public class ProduceReusableCategoryProbabilities {
 	
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException, ClassNotFoundException {
 		Configuration config = new SimpleConfiguration();
@@ -58,34 +56,36 @@ public class RunCategoryBackedRetrieval {
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 
-		ScorerDirichletCategory scorer = new ScorerDirichletCategory();
-		scorer.setCategoryProbability(cp);
-		scorer.setCollectionStats(cs);
-		scorer.setParameter(scorer.BACKGROUND_MIX, 0.5);
-		scorer.setParameter(scorer.PARAMETER_NAME, 2500);
-
-		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
-		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("categories", outputWriter);
-		
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
 
 			if (stopper != null)
 				query.applyStopper(stopper);
-			scorer.setQuery(query);
+			
+			List<String> queryList = new ArrayList<String>();
+			Iterator<String> qIt = query.getFeatureVector().iterator();
+			while (qIt.hasNext()) {
+				queryList.add(qIt.next());
+			}
 			
 			SearchHits hits = index.runQuery(query, 1000);
 			Iterator<SearchHit> hitIt = hits.iterator();
 			while (hitIt.hasNext()) {
 				SearchHit hit = hitIt.next();
-				FeatureVector dv = index.getDocVector(hit.getDocID(), null);
-				hit.setFeatureVector(dv);
-				hit.setLength(dv.getLength());
-				hit.setScore(scorer.score(hit));
+
+				cp.setDocument(hit);
+				Map<String, Double> termProbs = new HashMap<String, Double>();
+				try {
+					termProbs = cp.getProbability(queryList);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+
+				for (String term : termProbs.keySet()) {
+					System.out.println(query.getTitle()+"|"+hit.getDocno()+"|"+hit.getDocID()+"|"+term+"|"+termProbs.get(term));
+				}
 			}
-			hits.rank();
-			output.write(hits, query.getTitle());
 		}
 	}
 
