@@ -8,14 +8,14 @@ import java.util.Set;
 
 import edu.gslis.entities.DocumentEntities;
 import edu.gslis.entities.EntityCategories;
-import edu.gslis.entities.categories.CategoryModel;
+import edu.gslis.entities.categories.PrecomputedCategoryModel;
 import edu.gslis.entities.utils.CategoryNameToPathConverter;
 import edu.gslis.searchhits.SearchHit;
 
 public class SummedCategoryProbability implements CategoryProbability {
 
 	private DocumentEntities de;
-	private CategoryModel cm;
+	private PrecomputedCategoryModel cm;
 	private EntityCategories ec;
 	
 	/**
@@ -24,7 +24,7 @@ public class SummedCategoryProbability implements CategoryProbability {
 	 * @param ec	An EntityCategories object with entity categories already read in.
 	 * @param cm	A CategoryModel object with basePath specified.
 	 */
-	public SummedCategoryProbability(DocumentEntities de, EntityCategories ec, CategoryModel cm) {
+	public SummedCategoryProbability(DocumentEntities de, EntityCategories ec, PrecomputedCategoryModel cm) {
 		this.de = de;
 		this.ec = ec;
 		this.cm = cm;

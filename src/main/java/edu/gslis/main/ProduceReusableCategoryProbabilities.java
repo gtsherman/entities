@@ -12,6 +12,8 @@ import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.DocumentEntities;
 import edu.gslis.entities.EntityCategories;
 import edu.gslis.entities.categories.CategoryModel;
+import edu.gslis.entities.categories.MLECategoryModel;
+import edu.gslis.entities.categories.PrecomputedCategoryModel;
 import edu.gslis.entities.docscoring.support.CategoryProbability;
 import edu.gslis.entities.utils.Configuration;
 import edu.gslis.entities.utils.SimpleConfiguration;
@@ -29,6 +31,7 @@ public class ProduceReusableCategoryProbabilities {
 		config.read(args[0]);
 		
 		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
+		IndexWrapperIndriImpl wikiIndex = new IndexWrapperIndriImpl(config.get("wiki-index"));
 		
 		Stopper stopper = null;
 		if (config.get("stoplist") != null)
@@ -41,14 +44,18 @@ public class ProduceReusableCategoryProbabilities {
 		EntityCategories ec = new EntityCategories();
 		ec.readFileAbsolute(entityCategories);
 
-		String categoryModelsDir = config.get("category-models-directory");
-		CategoryModel cm = new CategoryModel();
-		cm.setBasePath(categoryModelsDir);
-		
 		String entityDocumentsDir = config.get("entity-documents-directory");
 		DocumentEntities de = new DocumentEntities();
 		de.setBasePath(entityDocumentsDir);
-		
+
+		String categoryModelsDir = config.get("category-models-directory");
+		String categoryModelClass = config.get("category-model-class");
+		CategoryModel cm = (CategoryModel) Class.forName(categoryModelClass).getConstructor().newInstance();
+		if (cm instanceof PrecomputedCategoryModel)
+			((PrecomputedCategoryModel) cm).setBasePath(categoryModelsDir);
+		if (cm instanceof MLECategoryModel)
+			((MLECategoryModel) cm).setIndex(wikiIndex);
+
 		String categoryProbabilityClass = config.get("category-probability-class");
 		
 		CategoryProbability cp = (CategoryProbability) Class.forName(categoryProbabilityClass).getConstructor(DocumentEntities.class, EntityCategories.class, CategoryModel.class).newInstance(de, ec, cm);

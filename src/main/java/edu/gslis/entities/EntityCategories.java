@@ -12,12 +12,14 @@ import edu.gslis.entities.readers.AbstractReader;
 
 public class EntityCategories extends AbstractReader {
 	
+	private static String thisClass = "[EntityCategories] ";
+	
 	private Map<String, Set<String>> entityCategories;
 	private Map<String, Set<String>> categoryEntities;
 
 	@Override
 	public void readFile(File file) {
-		System.err.println("Reading entity categories file: "+file.getAbsolutePath());
+		System.err.println(thisClass+"Reading entity categories file: "+file.getAbsolutePath());
 		entityCategories = new HashMap<String, Set<String>>();
 		categoryEntities = new HashMap<String, Set<String>>();
 
@@ -41,9 +43,9 @@ public class EntityCategories extends AbstractReader {
 				}
 			}
 			scanner.close();
-			System.err.println("Read "+entityCategories.keySet().size()+" entities");
+			System.err.println(thisClass+"Read "+entityCategories.keySet().size()+" entities");
 		} catch (FileNotFoundException e) {
-			System.err.println("Couldn't find file: "+file.getName());
+			System.err.println(thisClass+"Couldn't find file: "+file.getName());
 		}
 	}
 	

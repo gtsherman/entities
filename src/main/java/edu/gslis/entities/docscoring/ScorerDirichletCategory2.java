@@ -10,7 +10,7 @@ import edu.gslis.entities.docscoring.support.CategoryProbability;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
 
-public class ScorerDirichletCategory extends QueryDocScorer {
+public class ScorerDirichletCategory2 extends QueryDocScorer {
 	
 	private static String thisClass = "[ScorerDirichletCategory] ";
 
@@ -20,7 +20,7 @@ public class ScorerDirichletCategory extends QueryDocScorer {
 	
 	private CategoryProbability catProb;
 	
-	public ScorerDirichletCategory() {
+	public ScorerDirichletCategory2() {
 		setParameter(PARAMETER_NAME, 2500);
 	}
 
@@ -55,9 +55,9 @@ public class ScorerDirichletCategory extends QueryDocScorer {
 			double categoryProb = termProbs.get(feature);
 			System.err.println("\t\t\t"+thisClass+"Probability for term "+feature+": "+categoryProb);
 			double collectionProb = (EPSILON + collectionStats.termCount(feature)) / collectionStats.getTokCount();
-			double pr = (docFreq + 
-					paramTable.get(PARAMETER_NAME)*(paramTable.get(BACKGROUND_MIX)*categoryProb + (1-paramTable.get(BACKGROUND_MIX))*collectionProb)) / 
-					(docLength + paramTable.get(PARAMETER_NAME));
+			double pr = paramTable.get(BACKGROUND_MIX)*(docFreq + 
+					paramTable.get(PARAMETER_NAME)*collectionProb) / docLength + paramTable.get(PARAMETER_NAME) +
+					(1-paramTable.get(BACKGROUND_MIX))*categoryProb;
 			double queryWeight = gQuery.getFeatureVector().getFeatureWeight(feature);
 			logLikelihood += queryWeight * Math.log(pr);
 		}

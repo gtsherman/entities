@@ -10,9 +10,10 @@ import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.DocumentEntities;
 import edu.gslis.entities.EntityCategories;
-import edu.gslis.entities.categories.CategoryModel;
-import edu.gslis.entities.docscoring.ScorerDirichletCategory;
+import edu.gslis.entities.categories.PrecomputedCategoryModel;
+import edu.gslis.entities.docscoring.ScorerDirichletCategory2;
 import edu.gslis.entities.docscoring.support.CategoryProbability;
+import edu.gslis.entities.docscoring.support.PrecomputedCategoryProbability;
 import edu.gslis.entities.utils.Configuration;
 import edu.gslis.entities.utils.SimpleConfiguration;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
@@ -44,7 +45,7 @@ public class RunCategoryBackedRetrieval {
 		ec.readFileAbsolute(entityCategories);
 
 		String categoryModelsDir = config.get("category-models-directory");
-		CategoryModel cm = new CategoryModel();
+		PrecomputedCategoryModel cm = new PrecomputedCategoryModel();
 		cm.setBasePath(categoryModelsDir);
 		
 		String entityDocumentsDir = config.get("entity-documents-directory");
@@ -52,13 +53,19 @@ public class RunCategoryBackedRetrieval {
 		de.setBasePath(entityDocumentsDir);
 		
 		String categoryProbabilityClass = config.get("category-probability-class");
-		
-		CategoryProbability cp = (CategoryProbability) Class.forName(categoryProbabilityClass).getConstructor(DocumentEntities.class, EntityCategories.class, CategoryModel.class).newInstance(de, ec, cm);
+		String precomputedProbabilityFile = config.get("precomputed-probabilities");
+
+		CategoryProbability cp;
+		if (precomputedProbabilityFile == null) {
+			cp = (CategoryProbability) Class.forName(categoryProbabilityClass).getConstructor(DocumentEntities.class, EntityCategories.class, PrecomputedCategoryModel.class).newInstance(de, ec, cm);
+		} else {
+			cp = new PrecomputedCategoryProbability(precomputedProbabilityFile);
+		}
 		
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 
-		ScorerDirichletCategory scorer = new ScorerDirichletCategory();
+		ScorerDirichletCategory2 scorer = new ScorerDirichletCategory2();
 		scorer.setCategoryProbability(cp);
 		scorer.setCollectionStats(cs);
 		scorer.setParameter(scorer.BACKGROUND_MIX, 0.5);
@@ -74,6 +81,9 @@ public class RunCategoryBackedRetrieval {
 			if (stopper != null)
 				query.applyStopper(stopper);
 			scorer.setQuery(query);
+			
+			if (cp instanceof PrecomputedCategoryProbability)
+				((PrecomputedCategoryProbability) cp).setQuery(query);
 			
 			SearchHits hits = index.runQuery(query, 1000);
 			Iterator<SearchHit> hitIt = hits.iterator();

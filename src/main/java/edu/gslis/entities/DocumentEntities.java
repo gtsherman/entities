@@ -2,20 +2,23 @@ package edu.gslis.entities;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
 import edu.gslis.entities.readers.AbstractReader;
 
 public class DocumentEntities extends AbstractReader {
+	
+	private static String thisClass = "[DocumentEntities] ";
 
-	private Set<String> entities;
+	private Map<String, Integer> entityCount;
 	
 	@Override
 	public void readFile(File file) {
-		System.err.println("Reading file "+file.getAbsolutePath());
-		entities = new HashSet<String>();
+		System.err.println(thisClass+"Reading file "+file.getAbsolutePath());
+		entityCount = new HashMap<String, Integer>();
 		try {
 			Scanner scanner = new Scanner(file);
 			while (scanner.hasNextLine()) {
@@ -26,17 +29,38 @@ public class DocumentEntities extends AbstractReader {
 				String[] parts = line.split("\\t");
 
 				String entity = parts[parts.length-1];
-				entities.add(entity);
+				if (!entityCount.containsKey(entity))
+					entityCount.put(entity, 0);
+				int count = entityCount.get(entity);
+				entityCount.put(entity, count+1);
 			}
 			scanner.close();
-			System.err.println("Found TSV file: "+file.getName());
+			System.err.println(thisClass+"Found TSV file: "+file.getName());
 		} catch (FileNotFoundException e) {
-			System.err.println("Couldn't find TSV file: "+file.getName());
+			System.err.println(thisClass+"Couldn't find TSV file: "+file.getName());
 		}
 	}
 	
 	public Set<String> getEntities() {
-		return this.entities;
+		return this.entityCount.keySet();
+	}
+	
+	public int getEntityFreq(String entity) {
+		if (!this.entityCount.containsKey(entity))
+			return 0;
+		return this.entityCount.get(entity);
+	}
+	
+	public int getNumberOfEntities() {
+		int sum = 0;
+		for (String entity : this.entityCount.keySet()) {
+			sum += this.entityCount.get(entity);
+		}
+		return sum;
+	}
+	
+	public int getNumberOfUniqueEntities() {
+		return this.entityCount.keySet().size();
 	}
 
 }
