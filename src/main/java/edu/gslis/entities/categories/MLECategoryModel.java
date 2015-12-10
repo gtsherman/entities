@@ -62,7 +62,7 @@ public class MLECategoryModel implements CategoryModel {
 
 	private void readCategories(SearchHit document) {
 		FeatureVector backgroundVector = new FeatureVector(stopper);
-		FeatureVector categoryVector = null;
+		FeatureVector categoryVector = new FeatureVector(stopper);
 		Set<String> seenCategories = new HashSet<String>();
 		Iterator<String> vectorIt;
 		FeatureVector docVector;

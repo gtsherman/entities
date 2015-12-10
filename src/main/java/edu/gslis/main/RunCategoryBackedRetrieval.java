@@ -10,13 +10,17 @@ import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.DocumentEntities;
 import edu.gslis.entities.EntityCategories;
+import edu.gslis.entities.categories.CategoryModel;
+import edu.gslis.entities.categories.MLECategoryModel;
 import edu.gslis.entities.categories.PrecomputedCategoryModel;
-import edu.gslis.entities.docscoring.ScorerDirichletCategory2;
+import edu.gslis.entities.docscoring.ScorerDirichletCategory;
+import edu.gslis.entities.docscoring.support.CategoryLength;
 import edu.gslis.entities.docscoring.support.CategoryProbability;
 import edu.gslis.entities.docscoring.support.PrecomputedCategoryProbability;
+import edu.gslis.entities.docscoring.support.PrecomputedMLECategoryProbability;
 import edu.gslis.entities.utils.Configuration;
 import edu.gslis.entities.utils.SimpleConfiguration;
-import edu.gslis.indexes.IndexWrapperIndriImpl;
+import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
@@ -32,6 +36,9 @@ public class RunCategoryBackedRetrieval {
 		config.read(args[0]);
 		
 		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
+		IndexWrapperIndriImpl wikiIndex = null;
+		if (config.get("wiki-index") != null)
+			wikiIndex = new IndexWrapperIndriImpl(config.get("wiki-index"));
 		
 		Stopper stopper = null;
 		if (config.get("stoplist") != null)
@@ -43,10 +50,20 @@ public class RunCategoryBackedRetrieval {
 		String entityCategories = config.get("entity-categories");
 		EntityCategories ec = new EntityCategories();
 		ec.readFileAbsolute(entityCategories);
+		
+		CategoryLength cl = new CategoryLength();
+		if (config.get("category-lengths") != null) {
+			cl.readFileAbsolute(config.get("category-lengths"));
+		}
 
 		String categoryModelsDir = config.get("category-models-directory");
-		PrecomputedCategoryModel cm = new PrecomputedCategoryModel();
-		cm.setBasePath(categoryModelsDir);
+		String categoryModelClass = config.get("category-model-class");
+		CategoryModel cm = (CategoryModel) Class.forName(categoryModelClass).getConstructor().newInstance();
+		if (cm instanceof PrecomputedCategoryModel) {
+			((PrecomputedCategoryModel) cm).setBasePath(categoryModelsDir);
+		} else if (cm instanceof MLECategoryModel) {
+			((MLECategoryModel) cm).setIndex(wikiIndex);
+		}
 		
 		String entityDocumentsDir = config.get("entity-documents-directory");
 		DocumentEntities de = new DocumentEntities();
@@ -57,15 +74,18 @@ public class RunCategoryBackedRetrieval {
 
 		CategoryProbability cp;
 		if (precomputedProbabilityFile == null) {
-			cp = (CategoryProbability) Class.forName(categoryProbabilityClass).getConstructor(DocumentEntities.class, EntityCategories.class, PrecomputedCategoryModel.class).newInstance(de, ec, cm);
+			cp = (CategoryProbability) Class.forName(categoryProbabilityClass).getConstructor(DocumentEntities.class, EntityCategories.class, CategoryModel.class).newInstance(de, ec, cm);
 		} else {
 			cp = new PrecomputedCategoryProbability(precomputedProbabilityFile);
 		}
 		
+		if (cp instanceof PrecomputedMLECategoryProbability)
+			((PrecomputedMLECategoryProbability) cp).setCategoryLength(cl);
+		
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 
-		ScorerDirichletCategory2 scorer = new ScorerDirichletCategory2();
+		ScorerDirichletCategory scorer = new ScorerDirichletCategory();
 		scorer.setCategoryProbability(cp);
 		scorer.setCollectionStats(cs);
 		scorer.setParameter(scorer.BACKGROUND_MIX, 0.5);

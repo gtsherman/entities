@@ -38,11 +38,9 @@ public class PrecomputedCategoryModel extends AbstractReader implements Category
 	}
 	
 	public double getScore(String term) {
-		Double score = this.termScores.get(term);
-		if (score == null) {
-			return 0.0;
-		}
-		return score;
+		if (this.termScores.containsKey(term))
+			return this.termScores.get(term);
+		return 0.0;
 	}
 
 }

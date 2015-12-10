@@ -23,7 +23,9 @@ public class PrecomputedCategoryProbabilityReader extends AbstractReader {
 				String query = parts[0];
 				int docId = Integer.parseInt(parts[2]);
 				String term = parts[3];
-				double score = Double.parseDouble(parts[4]);
+				double score = 0.0;
+				if (!parts[4].trim().equals("NaN"))
+					score = Double.parseDouble(parts[4]);
 				
 				if (probabilities.get(query) == null) {
 					probabilities.put(query, new HashMap<Integer, Map<String, Double>>());

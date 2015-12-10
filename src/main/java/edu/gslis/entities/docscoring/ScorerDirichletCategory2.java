@@ -45,7 +45,7 @@ public class ScorerDirichletCategory2 extends QueryDocScorer {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
+		
 		double logLikelihood = 0.0;
 		Iterator<String> queryIterator = gQuery.getFeatureVector().iterator();
 		while(queryIterator.hasNext()) {
@@ -55,8 +55,8 @@ public class ScorerDirichletCategory2 extends QueryDocScorer {
 			double categoryProb = termProbs.get(feature);
 			System.err.println("\t\t\t"+thisClass+"Probability for term "+feature+": "+categoryProb);
 			double collectionProb = (EPSILON + collectionStats.termCount(feature)) / collectionStats.getTokCount();
-			double pr = paramTable.get(BACKGROUND_MIX)*(docFreq + 
-					paramTable.get(PARAMETER_NAME)*collectionProb) / docLength + paramTable.get(PARAMETER_NAME) +
+			double pr = paramTable.get(BACKGROUND_MIX)*((docFreq + 
+					paramTable.get(PARAMETER_NAME)*collectionProb) / (docLength + paramTable.get(PARAMETER_NAME))) +
 					(1-paramTable.get(BACKGROUND_MIX))*categoryProb;
 			double queryWeight = gQuery.getFeatureVector().getFeatureWeight(feature);
 			logLikelihood += queryWeight * Math.log(pr);
