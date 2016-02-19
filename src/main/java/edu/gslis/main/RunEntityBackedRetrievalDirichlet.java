@@ -3,34 +3,27 @@ package edu.gslis.main;
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.DocumentModel;
-import edu.gslis.entities.docscoring.ScorerDirichletCategory2;
+import edu.gslis.entities.docscoring.ScorerDirichletCategory;
 import edu.gslis.entities.docscoring.support.CategoryProbability;
 import edu.gslis.entities.docscoring.support.EntityCategoryProbability;
-import edu.gslis.entities.docscoring.support.EntityQueryWeightedProbability;
 import edu.gslis.entities.readers.DocumentEntityReader;
-import edu.gslis.entities.readers.RetrievedDocsReader;
-import edu.gslis.entities.readers.TopEntitiesReader;
 import edu.gslis.entities.utils.Configuration;
 import edu.gslis.entities.utils.SimpleConfiguration;
-import edu.gslis.patches.FormattedOutputTrecEval;
+import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
-import edu.gslis.queries.expansion.FeedbackRelevanceModel;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
-public class RunEntityBackedRetrieval {
+public class RunEntityBackedRetrievalDirichlet {
 
 	public static void main(String[] args) {
 		Configuration config = new SimpleConfiguration();
@@ -57,16 +50,9 @@ public class RunEntityBackedRetrieval {
 		
 		CategoryProbability cp;
 		if (config.get("document-models-dir") == null) {
-			System.err.println("Using EntityQueryWeightedProbability");
-			cp = new EntityQueryWeightedProbability(de, wikiIndex, stopper);
+			cp = new EntityCategoryProbability(de, wikiIndex, stopper);
 		} else {
-			System.err.println("Using EntityCategoryProbability");
 			cp = new EntityCategoryProbability(de, dm, stopper);
-		}
-
-		TopEntitiesReader topEntities = new TopEntitiesReader();
-		if (config.get("top-entities") != null) {
-			topEntities.readFileAbsolute(config.get("top-entities"));
 		}
 		
 		CollectionStats cs = new IndexBackedCollectionStats();
@@ -75,16 +61,7 @@ public class RunEntityBackedRetrieval {
 		if (cp instanceof EntityCategoryProbability) {
 			((EntityCategoryProbability) cp).setCollectionStats(cs);
 		}
-		if (cp instanceof EntityQueryWeightedProbability) {
-			((EntityQueryWeightedProbability) cp).setCollectionStats(cs);
-			if (config.get("top-entities") != null) {
-				((EntityQueryWeightedProbability) cp).setTopEntities(topEntities);
-			}
-		}
-		
-		RetrievedDocsReader docs = new RetrievedDocsReader();
-		docs.readFileAbsolute(config.get("retrieved-docs"));
-		
+
 		double backgroundMix = 0.5;
 		if (config.get("background-mix") != null) {
 			backgroundMix = Double.parseDouble(config.get("background-mix"));
@@ -95,7 +72,7 @@ public class RunEntityBackedRetrieval {
 			mu = Double.parseDouble(config.get("mu"));
 		}
 
-		ScorerDirichletCategory2 scorer = new ScorerDirichletCategory2();
+		ScorerDirichletCategory scorer = new ScorerDirichletCategory();
 		scorer.setCollectionStats(cs);
 		scorer.setCategoryProbability(cp);
 		scorer.setParameter(scorer.BACKGROUND_MIX, backgroundMix);
@@ -107,65 +84,24 @@ public class RunEntityBackedRetrieval {
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
-			
-			/*FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
-			rm.setIndex(index);
-			rm.setDocCount(20);
-			rm.setTermCount(20);
-			rm.setStopper(stopper);
-			rm.setOriginalQuery(query);
-			
-			rm.build();
-			FeatureVector rm3 = FeatureVector.interpolate(rm.asFeatureVector(), query.getFeatureVector(), 0.5);
-			GQuery rmQuery = new GQuery();
-			rmQuery.setFeatureVector(rm3);
-			rmQuery.setTitle(query.getTitle());;
-			*/
-			
+
+			if (stopper != null)
+				query.applyStopper(stopper);
 			scorer.setQuery(query);
 			
-			if (cp instanceof EntityQueryWeightedProbability) {
-				((EntityQueryWeightedProbability) cp).setQuery(query.getTitle());
-			}
-			
-			SearchHits hits = index.runQuery(query, 1000);
-			//List<String> retrievedDocs = docs.getDocsForQuery(query.getTitle());
-			Map<Double, SearchHits> lambdaToSearchHits = new HashMap<Double, SearchHits>();
-			//Iterator<String> docIt = retrievedDocs.iterator();
-			//while (docIt.hasNext()) {
+			SearchHits hits = index.runQuery(query, 3000);
 			Iterator<SearchHit> hitIt = hits.iterator();
 			while (hitIt.hasNext()) {
-				//String doc = docIt.next();
 				SearchHit hit = hitIt.next();
-				
-				//SearchHit hit = new SearchHit();
-				//hit.setDocno(doc);
-				FeatureVector dv = index.getDocVector(hit.getDocno(), null);
+				FeatureVector dv = index.getDocVector(hit.getDocID(), null);
 				hit.setFeatureVector(dv);
 				hit.setLength(dv.getLength());
-
-				scorer.score(hit); // produces scores for all values of lambda
-
-				for (double lambda : scorer.getLambdaToScore().keySet()) {
-					SearchHit newHit = new SearchHit();
-					newHit.setDocno(hit.getDocno());
-					newHit.setScore(scorer.getScore(lambda));
-					
-					if (!lambdaToSearchHits.containsKey(lambda)) {
-						lambdaToSearchHits.put(lambda, new SearchHits());
-					}
-					lambdaToSearchHits.get(lambda).add(newHit);
-				}
+				hit.setScore(scorer.score(hit));
 			}
-			for (double lambda : lambdaToSearchHits.keySet()) {
-				output.setRunId(Double.toString(lambda));
-				SearchHits theseHits = lambdaToSearchHits.get(lambda);
-				theseHits.rank();
-				theseHits.crop(1000);
-				output.write(theseHits, query.getTitle());
-			}
+			hits.rank();
+			hits.crop(1000);
+			output.write(hits, query.getTitle());
 		}
-		output.close();
 	}
 
 }
