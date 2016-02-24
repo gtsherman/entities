@@ -12,7 +12,6 @@ import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHits;
-import edu.gslis.utils.Stopper;
 
 public class RunIndriRetrieval {
 

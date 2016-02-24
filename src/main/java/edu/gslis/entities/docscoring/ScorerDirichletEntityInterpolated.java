@@ -6,11 +6,11 @@ import java.util.Iterator;
 import java.util.Map;
 
 import edu.gslis.docscoring.QueryDocScorer;
-import edu.gslis.entities.docscoring.support.CategoryProbability;
+import edu.gslis.entities.docscoring.support.EntityProbability;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
 
-public class ScorerDirichletCategory2 extends QueryDocScorer {
+public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
 	
 	private static String thisClass = "[ScorerDirichletCategory] ";
 
@@ -18,11 +18,11 @@ public class ScorerDirichletCategory2 extends QueryDocScorer {
 	public String BACKGROUND_MIX = "lambda";
 	public double EPSILON = 1.0;
 	
-	private CategoryProbability catProb;
+	private EntityProbability catProb;
 	
 	private Map<Double, Double> lambdaToScore;
 	
-	public ScorerDirichletCategory2() {
+	public ScorerDirichletEntityInterpolated() {
 		setParameter(PARAMETER_NAME, 2500);
 	}
 
@@ -30,7 +30,7 @@ public class ScorerDirichletCategory2 extends QueryDocScorer {
 		this.gQuery = query;
 	}
 	
-	public void setCategoryProbability(CategoryProbability cp) {
+	public void setCategoryProbability(EntityProbability cp) {
 		this.catProb = cp;
 	}
 

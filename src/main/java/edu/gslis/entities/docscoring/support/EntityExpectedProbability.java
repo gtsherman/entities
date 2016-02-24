@@ -14,7 +14,7 @@ import edu.gslis.searchhits.SearchHit;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
-public class EntityQueryWeightedProbability implements CategoryProbability {
+public class EntityExpectedProbability implements EntityProbability {
 	private String thisClass = "[EntityQueryWeightedProbability] "; 
 
 	private DocumentEntityReader de;
@@ -27,7 +27,7 @@ public class EntityQueryWeightedProbability implements CategoryProbability {
 	private String docno;
 	private String query;
 	
-	public EntityQueryWeightedProbability(DocumentEntityReader de, IndexWrapperIndriImpl index, Stopper stopper) {
+	public EntityExpectedProbability(DocumentEntityReader de, IndexWrapperIndriImpl index, Stopper stopper) {
 		this.de = de;
 		this.index = index;
 		this.stopper = stopper;

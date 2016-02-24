@@ -5,7 +5,7 @@ import java.util.Map;
 
 import edu.gslis.searchhits.SearchHit;
 
-public interface CategoryProbability {
+public interface EntityProbability {
 	
 	public void setDocument(SearchHit document);
 	

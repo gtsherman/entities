@@ -6,21 +6,21 @@ import java.util.Iterator;
 import java.util.Map;
 
 import edu.gslis.docscoring.QueryDocScorer;
-import edu.gslis.entities.docscoring.support.CategoryProbability;
+import edu.gslis.entities.docscoring.support.EntityProbability;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
 
-public class ScorerDirichletCategory2Single extends QueryDocScorer {
+public class ScorerDirichletEntitySmoothed extends QueryDocScorer {
 	
-	private static String thisClass = "[ScorerDirichletCategory] ";
+	private static String thisClass = "[ScorerDirichletCategoryNoCollection] ";
 
 	public String PARAMETER_NAME = "mu";
 	public String BACKGROUND_MIX = "lambda";
 	public double EPSILON = 1.0;
 	
-	private CategoryProbability catProb;
+	private EntityProbability catProb;
 	
-	public ScorerDirichletCategory2Single() {
+	public ScorerDirichletEntitySmoothed() {
 		setParameter(PARAMETER_NAME, 2500);
 	}
 
@@ -28,7 +28,7 @@ public class ScorerDirichletCategory2Single extends QueryDocScorer {
 		this.gQuery = query;
 	}
 	
-	public void setCategoryProbability(CategoryProbability cp) {
+	public void setCategoryProbability(EntityProbability cp) {
 		this.catProb = cp;
 	}
 
@@ -45,7 +45,7 @@ public class ScorerDirichletCategory2Single extends QueryDocScorer {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+
 		double logLikelihood = 0.0;
 		Iterator<String> queryIterator = gQuery.getFeatureVector().iterator();
 		while(queryIterator.hasNext()) {
@@ -53,14 +53,13 @@ public class ScorerDirichletCategory2Single extends QueryDocScorer {
 			double docFreq = doc.getFeatureVector().getFeatureWeight(feature);
 			double docLength = doc.getLength();
 			double categoryProb = termProbs.get(feature);
-			System.err.println("\t\t\t"+thisClass+"Probability for term "+feature+": "+categoryProb);
-			double collectionProb = (EPSILON + collectionStats.termCount(feature)) / collectionStats.getTokCount();
-			double pr = (1-paramTable.get(BACKGROUND_MIX))*((docFreq + 
-					paramTable.get(PARAMETER_NAME)*collectionProb) / (docLength + paramTable.get(PARAMETER_NAME))) +
-					(paramTable.get(BACKGROUND_MIX))*categoryProb;
+			double pr = (docFreq + 
+					paramTable.get(PARAMETER_NAME)*categoryProb) / 
+					(docLength + paramTable.get(PARAMETER_NAME));
 			double queryWeight = gQuery.getFeatureVector().getFeatureWeight(feature);
 			logLikelihood += queryWeight * Math.log(pr);
 		}
 		return logLikelihood;
 	}
+
 }
