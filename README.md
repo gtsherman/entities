@@ -6,11 +6,9 @@ Code for entity linking and information retrieval.
 Configuration Files
 -------------------
 
-Configuration files are of the form
+Configuration files consist of lines of the form
 
-> property1: value1
-> property2: value2
-> ...
+> property: value
 
 At the moment, there's no documentation for which properties a run requires. Looking through the run class (in the edu.gslis.main package) should make it clear.
 
@@ -19,7 +17,7 @@ Run Files
 
 Run files should look something like this:
 
-> java -Djava.library.path=/path/to/liblemur_jni/directory -cp "/path/to/lib/directory/" edu.gslis.main.RunClass /path/to/config/file
+> java -Djava.library.path=/path/to/liblemur_jni/directory/ -cp "/path/to/lib/directory/" edu.gslis.main.RunClass /path/to/config/file
 
 Notes:
 - You must have Indri installed
