@@ -457,4 +457,10 @@ public class IndexWrapperIndriImpl implements IndexWrapper{
     	}
     }
 
+
+	public void setTimeFieldName(String field) {
+		// Just exists to stop complaints. Edits to the original codebase solve this issue.
+		
+	}
+
 }

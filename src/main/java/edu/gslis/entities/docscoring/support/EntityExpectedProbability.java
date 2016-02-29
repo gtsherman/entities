@@ -8,7 +8,6 @@ import java.util.Set;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.entities.readers.DocumentEntityReader;
-import edu.gslis.entities.readers.TopEntitiesReader;
 import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.textrepresentation.FeatureVector;
@@ -20,12 +19,10 @@ public class EntityExpectedProbability implements EntityProbability {
 	private DocumentEntityReader de;
 	private IndexWrapperIndriImpl index;
 	private Stopper stopper;
-	private TopEntitiesReader topEntities;
 	
 	private List<String> entities;
 	private CollectionStats cs;
 	private String docno;
-	private String query;
 	
 	public EntityExpectedProbability(DocumentEntityReader de, IndexWrapperIndriImpl index, Stopper stopper) {
 		this.de = de;
@@ -45,14 +42,6 @@ public class EntityExpectedProbability implements EntityProbability {
 		this.cs = cs;
 	}
 	
-	public void setTopEntities(TopEntitiesReader topEntities) {
-		this.topEntities = topEntities;
-	}
-	
-	public void setQuery(String query) {
-		this.query = query;
-	}
-
 	public Map<String, Double> getProbability(List<String> terms) {
 		Map<String, Double> termProbs = new HashMap<String, Double>();
 
@@ -90,9 +79,6 @@ public class EntityExpectedProbability implements EntityProbability {
 				System.err.println(thisClass+"\tstarting confidence: "+confidence);
 				if (confidence < 0.0) {
 					confidence = Math.exp(confidence);
-				}
-				if (topEntities != null && !topEntities.getEntities(query).contains(entity)) {
-					confidence = 0.0;
 				}
 
 				System.err.println(thisClass+"\tfinal confidence: "+confidence);
