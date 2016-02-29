@@ -42,6 +42,26 @@ public class RunBaselineRelevanceModel {
 			mu = Double.parseDouble(config.get("mu"));
 		}
 
+		int numDocs = 1000;
+		if (config.get("num-docs") != null) {
+			numDocs = Integer.parseInt(config.get("num-docs"));
+		}
+		
+		int fbDocs = 20;
+		if (config.get("fb-docs") != null) {
+			fbDocs = Integer.parseInt(config.get("fb-docs"));
+		}
+		
+		int fbTerms = 20;
+		if (config.get("fb-terms") != null) {
+			fbTerms = Integer.parseInt(config.get("fb-terms"));
+		}
+		
+		double origQueryWeight = 0.5;
+		if (config.get("original-query-weight") != null) {
+			origQueryWeight = Double.parseDouble(config.get("original-query-weight"));
+		}
+
 		ScorerDirichlet scorer = new ScorerDirichlet();
 		scorer.setCollectionStats(cs);
 		scorer.setParameter(scorer.PARAMETER_NAME, mu);
@@ -55,22 +75,22 @@ public class RunBaselineRelevanceModel {
 			
 			FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
 			rm.setIndex(index);
-			rm.setDocCount(20);
-			rm.setTermCount(20);
+			rm.setDocCount(fbDocs);
+			rm.setTermCount(fbTerms);
 			rm.setStopper(stopper);
 			rm.setOriginalQuery(query);
 			
 			rm.build();
 			FeatureVector rmVec = rm.asGquery().getFeatureVector();
 			rmVec.normalize();
-			FeatureVector rm3 = FeatureVector.interpolate(rmVec, query.getFeatureVector(), 0.9);
+			FeatureVector rm3 = FeatureVector.interpolate(query.getFeatureVector(), rmVec, origQueryWeight);
 			GQuery rmQuery = new GQuery();
 			rmQuery.setFeatureVector(rm3);
 			rmQuery.setTitle(query.getTitle());
 			
 			scorer.setQuery(rmQuery);
 			
-			SearchHits hits = index.runQuery(rmQuery, 1000);
+			SearchHits hits = index.runQuery(rmQuery, numDocs);
 			hits.rank();
 			hits.crop(1000);
 			output.write(hits, query.getTitle());

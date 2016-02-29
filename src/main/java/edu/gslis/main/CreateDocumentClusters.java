@@ -19,7 +19,7 @@ import edu.gslis.searchhits.SearchHits;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
-public class ProduceDocumentToEntityResults {
+public class CreateDocumentClusters {
 
 	public static void main(String[] args) {
 		Configuration config = new SimpleConfiguration();

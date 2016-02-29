@@ -24,6 +24,11 @@ public class RunIndriRetrieval {
 		GQueriesJsonImpl queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
 		
+		int numDocs = 1000;
+		if (config.get("num-docs") != null) {
+			numDocs = Integer.parseInt(config.get("num-docs"));
+		}
+		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("categories", outputWriter);
 		
@@ -31,7 +36,7 @@ public class RunIndriRetrieval {
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
 
-			SearchHits hits = index.runQuery(query, 1000);
+			SearchHits hits = index.runQuery(query, numDocs);
 
 			output.write(hits, query.getTitle());
 		}

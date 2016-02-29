@@ -39,6 +39,26 @@ public class RunKBRelevanceModel {
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 
+		int numDocs = 1000;
+		if (config.get("num-docs") != null) {
+			numDocs = Integer.parseInt(config.get("num-docs"));
+		}
+		
+		int fbDocs = 20;
+		if (config.get("fb-docs") != null) {
+			fbDocs = Integer.parseInt(config.get("fb-docs"));
+		}
+		
+		int fbTerms = 20;
+		if (config.get("fb-terms") != null) {
+			fbTerms = Integer.parseInt(config.get("fb-terms"));
+		}
+		
+		double origQueryWeight = 0.5;
+		if (config.get("original-query-weight") != null) {
+			origQueryWeight = Double.parseDouble(config.get("original-query-weight"));
+		}	
+
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
 		
@@ -48,21 +68,21 @@ public class RunKBRelevanceModel {
 			
 			FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
 			rm.setIndex(wikiIndex);
-			rm.setDocCount(20);
-			rm.setTermCount(20);
+			rm.setDocCount(fbDocs);
+			rm.setTermCount(fbTerms);
 			rm.setStopper(stopper);
 			rm.setOriginalQuery(query);
 			
 			rm.build();
 			FeatureVector rmVec = rm.asGquery().getFeatureVector();
 			rmVec.normalize();
-			FeatureVector rm3 = FeatureVector.interpolate(rmVec, query.getFeatureVector(), 0.9);
+			FeatureVector rm3 = FeatureVector.interpolate(query.getFeatureVector(), rmVec, origQueryWeight);
 			GQuery rmQuery = new GQuery();
 			rmQuery.setFeatureVector(rm3);
 			rmQuery.setTitle(query.getTitle());
 			
 			
-			SearchHits hits = index.runQuery(rmQuery, 1000);
+			SearchHits hits = index.runQuery(rmQuery, numDocs);
 			hits.rank();
 			hits.crop(1000);
 			output.write(hits, query.getTitle());

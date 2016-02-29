@@ -36,6 +36,11 @@ public class RunBaselineRetrieval {
 		
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
+		
+		int numDocs = 1000;
+		if (config.get("num-docs") != null) {
+			numDocs = Integer.parseInt(config.get("num-docs"));
+		}
 
 		ScorerDirichlet scorer = new ScorerDirichlet();
 		scorer.setCollectionStats(cs);
@@ -51,7 +56,7 @@ public class RunBaselineRetrieval {
 				query.applyStopper(stopper);
 			scorer.setQuery(query);
 			
-			SearchHits hits = index.runQuery(query, 1000);
+			SearchHits hits = index.runQuery(query, numDocs);
 			Iterator<SearchHit> hitIt = hits.iterator();
 			while (hitIt.hasNext()) {
 				SearchHit hit = hitIt.next();
