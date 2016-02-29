@@ -15,7 +15,6 @@ public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
 	private static String thisClass = "[ScorerDirichletCategory] ";
 
 	public String PARAMETER_NAME = "mu";
-	public String BACKGROUND_MIX = "lambda";
 	public double EPSILON = 1.0;
 	
 	private EntityProbability catProb;
