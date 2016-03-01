@@ -79,6 +79,7 @@ public class RunBaselineRelevanceModel {
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
 			
+			i++;
 			logger.info("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
 			
 			FeedbackRelevanceModel rm = new FeedbackRelevanceModel();

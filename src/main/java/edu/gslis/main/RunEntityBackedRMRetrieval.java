@@ -7,6 +7,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.docscoring.ScorerDirichletEntityInterpolated;
@@ -27,6 +30,8 @@ import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
 public class RunEntityBackedRMRetrieval {
+	
+	final static Logger logger = LoggerFactory.getLogger(RunEntityBackedRMRetrieval.class);
 
 	public static void main(String[] args) {
 		Configuration config = new SimpleConfiguration();
@@ -93,9 +98,13 @@ public class RunEntityBackedRMRetrieval {
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
 		
 		Iterator<GQuery> queryIt = queries.iterator();
+		int i = 0;
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
 			
+			i++;
+			logger.info("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
+
 			FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
 			rm.setIndex(index);
 			rm.setDocCount(fbDocs);
@@ -111,9 +120,9 @@ public class RunEntityBackedRMRetrieval {
 			rmQuery.setFeatureVector(rm3);
 			rmQuery.setTitle(query.getTitle());;
 			
-			scorer.setQuery(query);
+			scorer.setQuery(rmQuery);
 		
-			SearchHits hits = index.runQuery(query, numDocs);
+			SearchHits hits = index.runQuery(rmQuery, numDocs);
 			Map<Double, SearchHits> lambdaToSearchHits = new HashMap<Double, SearchHits>();
 			Iterator<SearchHit> hitIt = hits.iterator();
 			while (hitIt.hasNext()) {
@@ -141,7 +150,7 @@ public class RunEntityBackedRMRetrieval {
 				SearchHits theseHits = lambdaToSearchHits.get(lambda);
 				theseHits.rank();
 				theseHits.crop(1000);
-				output.write(theseHits, query.getTitle());
+				output.write(theseHits, rmQuery.getTitle());
 			}
 		}
 		output.close();

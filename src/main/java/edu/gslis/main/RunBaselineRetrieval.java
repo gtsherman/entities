@@ -59,6 +59,7 @@ public class RunBaselineRetrieval {
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
 
+			i++;
 			logger.info("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
 
 			if (stopper != null)
