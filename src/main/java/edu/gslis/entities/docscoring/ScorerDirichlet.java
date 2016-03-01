@@ -2,6 +2,9 @@ package edu.gslis.entities.docscoring;
 
 import java.util.Iterator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import edu.gslis.docscoring.QueryDocScorer;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
@@ -13,6 +16,9 @@ import edu.gslis.searchhits.SearchHit;
  *
  */
 public class ScorerDirichlet extends QueryDocScorer {
+
+	final static Logger logger = LoggerFactory.getLogger(ScorerDirichlet.class);
+	
 	public String PARAMETER_NAME = "mu";
 	public double EPSILON = 1.0;
 	
@@ -38,11 +44,11 @@ public class ScorerDirichlet extends QueryDocScorer {
 					paramTable.get(PARAMETER_NAME)*collectionProb) / 
 					(docLength + paramTable.get(PARAMETER_NAME));
 			double queryWeight = gQuery.getFeatureVector().getFeatureWeight(feature);
-			System.err.println(doc.getDocno());
-			System.err.println("\tterm: "+feature);
-			System.err.println("\t\t\tdocFreq: "+docFreq);
-			System.err.println("\t\t\tcollection prob: "+collectionProb);
-			System.err.println("\t\t\tdoclength: "+docLength);
+			logger.debug(doc.getDocno());
+			logger.debug("term: "+feature);
+			logger.debug("docFreq: "+docFreq);
+			logger.debug("collection prob: "+collectionProb);
+			logger.debug("doclength: "+docLength);
 
 			logLikelihood += queryWeight * Math.log(pr);
 		}

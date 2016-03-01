@@ -7,17 +7,20 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import edu.gslis.entities.readers.AbstractReader;
 
 public class DocumentEntities extends AbstractReader {
 	
-	private static String thisClass = "[DocumentEntities] ";
+	final static Logger logger = LoggerFactory.getLogger(DocumentEntities.class);
 
 	private Map<String, Integer> entityCount;
 	
 	@Override
 	public void readFile(File file) {
-		System.err.println(thisClass+"Reading file "+file.getAbsolutePath());
+		logger.info("Reading file "+file.getAbsolutePath());
 		entityCount = new HashMap<String, Integer>();
 		try {
 			Scanner scanner = new Scanner(file);
@@ -35,9 +38,8 @@ public class DocumentEntities extends AbstractReader {
 				entityCount.put(entity, count+1);
 			}
 			scanner.close();
-			System.err.println(thisClass+"Found TSV file: "+file.getName());
 		} catch (FileNotFoundException e) {
-			System.err.println(thisClass+"Couldn't find TSV file: "+file.getName());
+			logger.error("Couldn't find TSV file: "+file.getName());
 		}
 	}
 	

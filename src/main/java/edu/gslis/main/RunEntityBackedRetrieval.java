@@ -7,6 +7,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.docscoring.ScorerDirichletEntityInterpolated;
@@ -26,6 +29,8 @@ import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
 public class RunEntityBackedRetrieval {
+	
+	static final Logger logger = LoggerFactory.getLogger(RunEntityBackedRetrieval.class);
 
 	public static void main(String[] args) {
 		Configuration config = new SimpleConfiguration();
@@ -77,8 +82,11 @@ public class RunEntityBackedRetrieval {
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
 		
 		Iterator<GQuery> queryIt = queries.iterator();
+		int i = 0;
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
+
+			logger.info("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
 			
 			scorer.setQuery(query);
 		

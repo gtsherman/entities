@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import edu.gslis.docscoring.QueryDocScorer;
 import edu.gslis.entities.docscoring.support.EntityProbability;
 import edu.gslis.queries.GQuery;
@@ -12,7 +15,7 @@ import edu.gslis.searchhits.SearchHit;
 
 public class ScorerDirichletEntitySmoothed extends QueryDocScorer {
 	
-	private static String thisClass = "[ScorerDirichletCategoryNoCollection] ";
+	final static Logger logger = LoggerFactory.getLogger(ScorerDirichletEntitySmoothed.class);
 
 	public String PARAMETER_NAME = "mu";
 	public String BACKGROUND_MIX = "lambda";

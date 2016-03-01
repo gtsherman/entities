@@ -5,6 +5,9 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.docscoring.ScorerDirichlet;
@@ -20,6 +23,8 @@ import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
 public class RunBaselineRetrieval {
+	
+	static final Logger logger = LoggerFactory.getLogger(RunBaselineRetrieval.class);
 	
 	public static void main(String[] args) {
 		Configuration config = new SimpleConfiguration();
@@ -50,8 +55,12 @@ public class RunBaselineRetrieval {
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("categories", outputWriter);
 		
 		Iterator<GQuery> queryIt = queries.iterator();
+		int i = 0;
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
+
+			logger.info("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
+
 			if (stopper != null)
 				query.applyStopper(stopper);
 			scorer.setQuery(query);

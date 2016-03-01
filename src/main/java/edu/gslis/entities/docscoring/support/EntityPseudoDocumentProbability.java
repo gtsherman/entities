@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.entities.readers.DocumentEntityReader;
 import edu.gslis.patches.IndexWrapperIndriImpl;
@@ -15,7 +18,8 @@ import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
 public class EntityPseudoDocumentProbability implements EntityProbability {
-	private String thisClass = "[EntityCategoryProbability] "; 
+	
+	final static Logger logger = LoggerFactory.getLogger(EntityPseudoDocumentProbability.class);
 
 	private DocumentEntityReader de;
 	private IndexWrapperIndriImpl index;
@@ -33,8 +37,8 @@ public class EntityPseudoDocumentProbability implements EntityProbability {
 	public void setDocument(SearchHit document) {
 		entities = de.getEntities(document.getDocno());
 		
-		System.err.println(thisClass+"Document: "+document.getDocno());
-		System.err.println("\t"+thisClass+"There are "+entities.size()+" entities for this document");
+		logger.info("Document: "+document.getDocno());
+		logger.debug("There are "+entities.size()+" entities for this document");
 	}
 	
 	public void setCollectionStats(CollectionStats cs) {
@@ -51,7 +55,7 @@ public class EntityPseudoDocumentProbability implements EntityProbability {
 		FeatureVector combinedEntityVector = new FeatureVector(stopper);
 		for (String entity : entitySet) {
 			if (!entityVectors.containsKey(entity)) {
-				System.err.println(thisClass+"Getting vector for "+entity);
+				logger.debug("Getting vector for "+entity);
 				entityVectors.put(entity, index.getDocVector(entity, stopper));
 			}
 			FeatureVector entityVector = entityVectors.get(entity);
@@ -73,15 +77,15 @@ public class EntityPseudoDocumentProbability implements EntityProbability {
 				collectionScore = (1.0 + cs.termCount(term)) / cs.getTokCount();
 				mu = 2500;
 			}
-			System.err.println(thisClass+term+": "+combinedEntityVector.getFeatureWeight(term));
-			System.err.println(thisClass+"doclength: "+combinedEntityVector.getLength());
+			logger.debug(term+": "+combinedEntityVector.getFeatureWeight(term));
+			logger.debug("doclength: "+combinedEntityVector.getLength());
 			double score = (combinedEntityVector.getFeatureWeight(term) + mu*collectionScore) / (combinedEntityVector.getLength() + 1 + mu);
 			termProbs.put(term, score);
 		}
 		
-		System.err.println(thisClass+"Term probabilities:");
+		logger.debug("Term probabilities:");
 		for (String term : termProbs.keySet()) {
-			System.err.println("\t"+term+" "+termProbs.get(term));
+			logger.debug(term+" "+termProbs.get(term));
 		}
 			
 		return termProbs;

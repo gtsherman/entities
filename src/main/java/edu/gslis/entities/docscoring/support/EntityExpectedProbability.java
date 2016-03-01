@@ -6,6 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.entities.readers.DocumentEntityReader;
 import edu.gslis.patches.IndexWrapperIndriImpl;
@@ -14,7 +17,8 @@ import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
 public class EntityExpectedProbability implements EntityProbability {
-	private String thisClass = "[EntityQueryWeightedProbability] "; 
+	
+	final static Logger logger = LoggerFactory.getLogger(EntityExpectedProbability.class);
 
 	private DocumentEntityReader de;
 	private IndexWrapperIndriImpl index;
@@ -34,8 +38,8 @@ public class EntityExpectedProbability implements EntityProbability {
 		docno = document.getDocno();
 		entities = de.getEntities(docno);
 		
-		System.err.println(thisClass+"Document: "+document.getDocno());
-		System.err.println("\t"+thisClass+"There are "+entities.size()+" entities for this document");
+		logger.info("Document: "+document.getDocno());
+		logger.debug("There are "+entities.size()+" entities for this document");
 	}
 	
 	public void setCollectionStats(CollectionStats cs) {
@@ -48,7 +52,7 @@ public class EntityExpectedProbability implements EntityProbability {
 		Set<String> termSet = new HashSet<String>(terms);
 		Set<String> entitySet = new HashSet<String>(entities);
 
-		System.err.println(thisClass+"Using index.");
+		logger.debug("Using index.");
 		
 		Map<String, FeatureVector> entityVecs = new HashMap<String, FeatureVector>();
 		for (String entity : entitySet) {
@@ -71,18 +75,18 @@ public class EntityExpectedProbability implements EntityProbability {
 			for (String entity : entitySet) {
 				entityVector = entityVecs.get(entity);
 
-				System.err.println(thisClass+term+": "+entityVector.getFeatureWeight(term));
-				System.err.println(thisClass+"\tdoclength: "+entityVector.getLength());
+				logger.debug(term+": "+entityVector.getFeatureWeight(term));
+				logger.debug("doclength: "+entityVector.getLength());
 
 				double qlscore = (entityVector.getFeatureWeight(term) + mu*collectionScore) / (entityVector.getLength() + mu);
 				double confidence = de.getEntityConfidence(docno, entity);
-				System.err.println(thisClass+"\tstarting confidence: "+confidence);
+				logger.debug("starting confidence: "+confidence);
 				if (confidence < 0.0) {
 					confidence = Math.exp(confidence);
 				}
 
-				System.err.println(thisClass+"\tfinal confidence: "+confidence);
-				System.err.println(thisClass+"\tfinal: "+qlscore*confidence);
+				logger.debug("final confidence: "+confidence);
+				logger.debug("final: "+qlscore*confidence);
 				
 				termProbs.put(term, termProbs.get(term)+(qlscore*confidence));
 			}

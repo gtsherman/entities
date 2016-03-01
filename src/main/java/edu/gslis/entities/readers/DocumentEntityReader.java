@@ -10,9 +10,12 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
-public class DocumentEntityReader extends AbstractReader {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-	private final String thisClass = "[DocumentEntityReader] ";
+public class DocumentEntityReader extends AbstractReader {
+	
+	static final Logger logger = LoggerFactory.getLogger(DocumentEntityReader.class);
 
 	private Map<String, Map<String, Double>> documentEntities;
 	
@@ -34,7 +37,7 @@ public class DocumentEntityReader extends AbstractReader {
 					}
 					documentEntities.get(document).put(entity, confidence);
 				} catch (ArrayIndexOutOfBoundsException e) {
-					System.err.println(thisClass+"Error reading line: "+line);
+					logger.error("Error reading line: "+line);
 				}
 			}
 			scanner.close();
@@ -47,7 +50,7 @@ public class DocumentEntityReader extends AbstractReader {
 	public List<String> getEntities(String document) {
 		if (documentEntities.containsKey(document))
 			return new ArrayList<String>(documentEntities.get(document).keySet());
-		System.err.println(thisClass+"No document "+document+" recorded");
+		logger.warn("No document "+document+" recorded");
 		return new ArrayList<String>();
 	}
 	

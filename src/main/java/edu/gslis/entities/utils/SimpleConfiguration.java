@@ -6,7 +6,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class SimpleConfiguration implements Configuration {
+	
+	static final Logger logger = LoggerFactory.getLogger(SimpleConfiguration.class);
 
 	private Map<String, String> config;
 	
@@ -26,7 +31,7 @@ public class SimpleConfiguration implements Configuration {
 			}
 			scanner.close();
 		} catch (FileNotFoundException e) {
-			System.err.println("Configuration file not found.");
+			logger.error("Configuration file not found. A configuration file is required. Exiting...");
 			System.exit(-1);
 		}
 	}

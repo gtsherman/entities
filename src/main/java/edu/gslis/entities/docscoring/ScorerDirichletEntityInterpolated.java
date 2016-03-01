@@ -5,6 +5,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import edu.gslis.docscoring.QueryDocScorer;
 import edu.gslis.entities.docscoring.support.EntityProbability;
 import edu.gslis.queries.GQuery;
@@ -12,8 +15,8 @@ import edu.gslis.searchhits.SearchHit;
 
 public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
 	
-	private static String thisClass = "[ScorerDirichletCategory] ";
-
+	final static Logger logger = LoggerFactory.getLogger(ScorerDirichletEntityInterpolated.class);
+	
 	public String PARAMETER_NAME = "mu";
 	public double EPSILON = 1.0;
 	
@@ -56,7 +59,7 @@ public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
 				double docFreq = doc.getFeatureVector().getFeatureWeight(feature);
 				double docLength = doc.getLength();
 				double categoryProb = termProbs.get(feature);
-				System.err.println("\t\t\t"+thisClass+"Probability for term "+feature+": "+categoryProb);
+				logger.debug("Probability for term "+feature+": "+categoryProb);
 				double collectionProb = (EPSILON + collectionStats.termCount(feature)) / collectionStats.getTokCount();
 				double pr = (1-lambda)*((docFreq + 
 						paramTable.get(PARAMETER_NAME)*collectionProb) / (docLength + paramTable.get(PARAMETER_NAME))) +
@@ -64,7 +67,7 @@ public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
 				double queryWeight = gQuery.getFeatureVector().getFeatureWeight(feature);
 				logLikelihood += queryWeight * Math.log(pr);
 			}
-			System.err.println(thisClass+" "+doc.getDocno()+", "+lambda+": "+logLikelihood);
+			logger.debug(doc.getDocno()+", "+lambda+": "+logLikelihood);
 			lambdaToScore.put(lambda, logLikelihood);
 		}
 		setLambdaToScore(lambdaToScore);
