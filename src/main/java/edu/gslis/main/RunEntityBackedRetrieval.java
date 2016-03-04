@@ -16,16 +16,16 @@ import edu.gslis.entities.docscoring.ScorerDirichletEntityInterpolated;
 import edu.gslis.entities.docscoring.support.EntityExpectedProbability;
 import edu.gslis.entities.docscoring.support.EntityProbability;
 import edu.gslis.entities.docscoring.support.EntityPseudoDocumentProbability;
-import edu.gslis.entities.readers.DocumentEntityReader;
-import edu.gslis.entities.utils.Configuration;
-import edu.gslis.entities.utils.SimpleConfiguration;
 import edu.gslis.patches.FormattedOutputTrecEval;
 import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
+import edu.gslis.readers.DocumentEntityReader;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.textrepresentation.FeatureVector;
+import edu.gslis.utils.Configuration;
+import edu.gslis.utils.SimpleConfiguration;
 import edu.gslis.utils.Stopper;
 
 public class RunEntityBackedRetrieval {

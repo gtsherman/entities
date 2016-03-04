@@ -10,7 +10,7 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import edu.gslis.entities.readers.AbstractReader;
+import edu.gslis.readers.AbstractReader;
 
 public class DocumentEntities extends AbstractReader {
 	

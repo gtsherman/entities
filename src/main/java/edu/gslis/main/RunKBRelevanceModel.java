@@ -10,8 +10,6 @@ import org.slf4j.LoggerFactory;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
-import edu.gslis.entities.utils.Configuration;
-import edu.gslis.entities.utils.SimpleConfiguration;
 import edu.gslis.patches.FormattedOutputTrecEval;
 import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
@@ -19,6 +17,8 @@ import edu.gslis.queries.GQuery;
 import edu.gslis.queries.expansion.FeedbackRelevanceModel;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.textrepresentation.FeatureVector;
+import edu.gslis.utils.Configuration;
+import edu.gslis.utils.SimpleConfiguration;
 import edu.gslis.utils.Stopper;
 
 public class RunKBRelevanceModel {

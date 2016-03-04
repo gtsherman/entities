@@ -11,8 +11,6 @@ import org.slf4j.LoggerFactory;
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.docscoring.ScorerDirichlet;
-import edu.gslis.entities.utils.Configuration;
-import edu.gslis.entities.utils.SimpleConfiguration;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
@@ -20,6 +18,8 @@ import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.textrepresentation.FeatureVector;
+import edu.gslis.utils.Configuration;
+import edu.gslis.utils.SimpleConfiguration;
 import edu.gslis.utils.Stopper;
 
 public class RunBaselineRetrieval {

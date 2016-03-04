@@ -12,14 +12,14 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import edu.gslis.entities.utils.Configuration;
-import edu.gslis.entities.utils.SimpleConfiguration;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.textrepresentation.FeatureVector;
+import edu.gslis.utils.Configuration;
+import edu.gslis.utils.SimpleConfiguration;
 import edu.gslis.utils.Stopper;
 
 public class CreateDocumentClusters {

@@ -11,8 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import edu.gslis.docscoring.support.CollectionStats;
-import edu.gslis.entities.readers.DocumentEntityReader;
 import edu.gslis.patches.IndexWrapperIndriImpl;
+import edu.gslis.readers.DocumentEntityReader;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
@@ -78,7 +78,7 @@ public class EntityPseudoDocumentProbability implements EntityProbability {
 				mu = 2500;
 			}
 			logger.debug(term+": "+combinedEntityVector.getFeatureWeight(term));
-			logger.debug("doclength: "+combinedEntityVector.getLength());
+			logger.debug("Document length: "+combinedEntityVector.getLength());
 			double score = (combinedEntityVector.getFeatureWeight(term) + mu*collectionScore) / (combinedEntityVector.getLength() + 1 + mu);
 			termProbs.put(term, score);
 		}

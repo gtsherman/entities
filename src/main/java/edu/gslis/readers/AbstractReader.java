@@ -1,4 +1,4 @@
-package edu.gslis.entities.readers;
+package edu.gslis.readers;
 
 import java.io.File;
 

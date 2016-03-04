@@ -5,13 +5,13 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 
-import edu.gslis.entities.utils.Configuration;
-import edu.gslis.entities.utils.SimpleConfiguration;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHits;
+import edu.gslis.utils.Configuration;
+import edu.gslis.utils.SimpleConfiguration;
 
 public class RunIndriRetrieval {
 
@@ -30,7 +30,7 @@ public class RunIndriRetrieval {
 		}
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
-		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("categories", outputWriter);
+		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("baseline", outputWriter);
 		
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {

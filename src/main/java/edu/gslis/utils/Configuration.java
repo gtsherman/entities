@@ -1,4 +1,4 @@
-package edu.gslis.entities.utils;
+package edu.gslis.utils;
 
 public interface Configuration {
 	

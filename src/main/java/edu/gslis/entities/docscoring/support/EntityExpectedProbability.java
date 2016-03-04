@@ -10,8 +10,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import edu.gslis.docscoring.support.CollectionStats;
-import edu.gslis.entities.readers.DocumentEntityReader;
 import edu.gslis.patches.IndexWrapperIndriImpl;
+import edu.gslis.readers.DocumentEntityReader;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
@@ -74,19 +74,21 @@ public class EntityExpectedProbability implements EntityProbability {
 			FeatureVector entityVector;
 			for (String entity : entitySet) {
 				entityVector = entityVecs.get(entity);
+				
+				logger.debug("Entity: "+entity);
 
 				logger.debug(term+": "+entityVector.getFeatureWeight(term));
-				logger.debug("doclength: "+entityVector.getLength());
+				logger.debug("Document length: "+entityVector.getLength());
 
 				double qlscore = (entityVector.getFeatureWeight(term) + mu*collectionScore) / (entityVector.getLength() + mu);
 				double confidence = de.getEntityConfidence(docno, entity);
-				logger.debug("starting confidence: "+confidence);
+				logger.debug("Starting confidence: "+confidence);
 				if (confidence < 0.0) {
 					confidence = Math.exp(confidence);
 				}
 
-				logger.debug("final confidence: "+confidence);
-				logger.debug("final: "+qlscore*confidence);
+				logger.debug("Recalculated confidence: "+confidence);
+				logger.debug("Final score: "+qlscore*confidence);
 				
 				termProbs.put(term, termProbs.get(term)+(qlscore*confidence));
 			}
