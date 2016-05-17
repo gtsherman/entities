@@ -17,6 +17,8 @@ public class DocumentEntityReader extends AbstractReader {
 	
 	static final Logger logger = LoggerFactory.getLogger(DocumentEntityReader.class);
 
+	private int limit = 10;
+	
 	private Map<String, Map<String, Double>> documentEntities;
 	
 	@Override
@@ -34,6 +36,9 @@ public class DocumentEntityReader extends AbstractReader {
 					double confidence = Double.parseDouble(parts[2].trim());
 					if (!documentEntities.containsKey(document)) {
 						documentEntities.put(document, new HashMap<String, Double>());
+					}
+					if (documentEntities.get(document).keySet().size() >= limit) {
+						continue;
 					}
 					documentEntities.get(document).put(entity, confidence);
 				} catch (ArrayIndexOutOfBoundsException e) {
@@ -73,5 +78,9 @@ public class DocumentEntityReader extends AbstractReader {
 			return 0.0;
 		}
 		return documentEntities.get(document).get(entity);
+	}
+	
+	public void setLimit(int numEntities) {
+		this.limit = numEntities;
 	}
 }

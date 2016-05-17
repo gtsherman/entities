@@ -29,6 +29,7 @@ public class ClusteredDocumentConfidenceScorer {
 			SearchHit doc = docIt.next();
 			totalCosine += doc.getScore();
 		}
+		logger.debug("Total cosine for cluster: "+totalCosine);
 	}
 	
 	public SearchHits computeConfidenceScores() {

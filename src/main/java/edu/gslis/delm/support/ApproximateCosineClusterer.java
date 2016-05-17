@@ -54,12 +54,16 @@ public class ApproximateCosineClusterer {
 		// Get an initial retrieval that is most likely to be similar
 		SearchHits results = index.runQuery(query, 3000);
 		
+		logger.debug("# Results for "+document.getDocno()+": "+results.size());
+		
 		// Rescore results with cosine scorer
 		Iterator<SearchHit> resultIt = results.iterator();
 		while (resultIt.hasNext()) {
 			SearchHit result = resultIt.next();
+			result.setFeatureVector(index.getDocVector(result.getDocID(), null));
 			
 			if (result.getDocno().equals(document.getDocno())) {
+				logger.debug("Skipping self");
 				continue;
 			}
 			
@@ -71,6 +75,8 @@ public class ApproximateCosineClusterer {
 		
 		results.rank();
 		results.crop(m);
+		
+		logger.debug("# in cluster:"+results.size());
 		return results;
 	}
 	

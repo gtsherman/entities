@@ -44,7 +44,7 @@ public class CosineSimilarityScorer {
 		vocab.addAll(otherdoc.getFeatures());
 
 		logger.debug("Doc length 1: "+doc.getFeatures().size());
-		logger.debug("Doc length 2:" +otherdoc.getFeatures().size());
+		logger.debug("Doc length 2: "+otherdoc.getFeatures().size());
 		logger.debug("Total: "+vocab.size());
 		
 		Iterator<String> termIt = vocab.iterator();

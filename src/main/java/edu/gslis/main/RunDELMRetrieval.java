@@ -1,8 +1,5 @@
 package edu.gslis.main;
 
-import java.io.BufferedWriter;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
 import java.util.Iterator;
 
 import org.slf4j.Logger;
@@ -13,7 +10,6 @@ import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.docscoring.ScorerDirichlet;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
-import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
@@ -56,9 +52,6 @@ public class RunDELMRetrieval {
 		ScorerDirichlet scorer = new ScorerDirichlet();
 		scorer.setCollectionStats(cs);
 		scorer.setParameter(scorer.PARAMETER_NAME, 2500);
-
-		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
-		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("categories", outputWriter);
 		
 		Iterator<GQuery> queryIt = queries.iterator();
 		int i = 0;
@@ -83,11 +76,19 @@ public class RunDELMRetrieval {
 				DocumentExpander expander = new DocumentExpander(index, stopper);
 				expander.expand(hit, alpha);
 				
-				hit.setFeatureVector(expander.getPseudoDocVector());
-				hit.setScore(scorer.score(hit));
+				/*hit.setFeatureVector(expander.getPseudoDocVector());
+				hit.setScore(scorer.score(hit));*/
+				
+				FeatureVector expanded = expander.getPseudoDocVector();
+				Iterator<String> termIt = expanded.iterator();
+				while (termIt.hasNext()) {
+					String term = termIt.next();
+					System.out.println(hit.getDocno()+"\t"+term+"\t"+expanded.getFeatureWeight(term));
+				}
 			}
-			hits.rank();
-			output.write(hits, query.getTitle());
+			/*hits.rank();
+			hits.crop(1000);
+			output.write(hits, query.getTitle());*/
 		}
 	}
 

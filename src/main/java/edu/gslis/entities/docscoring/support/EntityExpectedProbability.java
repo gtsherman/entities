@@ -55,8 +55,19 @@ public class EntityExpectedProbability implements EntityProbability {
 		logger.debug("Using index.");
 		
 		Map<String, FeatureVector> entityVecs = new HashMap<String, FeatureVector>();
+		Map<String, Double> normalizedConfidences = new HashMap<String, Double>();
+		double totalConfidence = 0.0;
 		for (String entity : entitySet) {
 			entityVecs.put(entity, index.getDocVector(entity, stopper));
+
+			double confidence = de.getEntityConfidence(docno, entity);
+			normalizedConfidences.put(entity, confidence);
+			totalConfidence += confidence;
+		}
+		
+		for (String entity : normalizedConfidences.keySet()) {
+			double initialConfidence = normalizedConfidences.get(entity);
+			normalizedConfidences.put(entity, initialConfidence / totalConfidence);
 		}
 
 		for (String term : termSet) {
@@ -81,13 +92,8 @@ public class EntityExpectedProbability implements EntityProbability {
 				logger.debug("Document length: "+entityVector.getLength());
 
 				double qlscore = (entityVector.getFeatureWeight(term) + mu*collectionScore) / (entityVector.getLength() + mu);
-				double confidence = de.getEntityConfidence(docno, entity);
-				logger.debug("Starting confidence: "+confidence);
-				if (confidence < 0.0) {
-					confidence = Math.exp(confidence);
-				}
-
-				logger.debug("Recalculated confidence: "+confidence);
+				double confidence = normalizedConfidences.get(entity);
+				
 				logger.debug("Final score: "+qlscore*confidence);
 				
 				termProbs.put(term, termProbs.get(term)+(qlscore*confidence));

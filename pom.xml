@@ -31,7 +31,7 @@
   </repositories>
   <build>
         <plugins>
-          <plugin>
+          <!-- plugin>
               <artifactId>maven-assembly-plugin</artifactId>
               <configuration>
                   <descriptorRefs>
@@ -47,7 +47,7 @@
                       </goals>
                   </execution>
               </executions>
-          </plugin>
+          </plugin -->
           <plugin>
             <artifactId>maven-dependency-plugin</artifactId>
             <executions>

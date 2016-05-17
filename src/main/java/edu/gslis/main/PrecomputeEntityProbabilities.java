@@ -1,9 +1,8 @@
 package edu.gslis.main;
 
-import java.io.BufferedWriter;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.HashMap;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -16,21 +15,19 @@ import edu.gslis.entities.docscoring.ScorerDirichletEntityInterpolated;
 import edu.gslis.entities.docscoring.support.EntityExpectedProbability;
 import edu.gslis.entities.docscoring.support.EntityProbability;
 import edu.gslis.entities.docscoring.support.EntityPseudoDocumentProbability;
-import edu.gslis.patches.FormattedOutputTrecEval;
 import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.readers.DocumentEntityReader;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
-import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Configuration;
 import edu.gslis.utils.SimpleConfiguration;
 import edu.gslis.utils.Stopper;
 
-public class RunEntityBackedRetrieval {
+public class PrecomputeEntityProbabilities {
 	
-	static final Logger logger = LoggerFactory.getLogger(RunEntityBackedRetrieval.class);
+	static final Logger logger = LoggerFactory.getLogger(PrecomputeEntityProbabilities.class);
 
 	public static void main(String[] args) {
 		Configuration config = new SimpleConfiguration();
@@ -65,66 +62,44 @@ public class RunEntityBackedRetrieval {
 			((EntityExpectedProbability) cp).setCollectionStats(cs);
 		}
 		
-		double mu = 2500;
-		if (config.get("mu") != null) {
-			mu = Double.parseDouble(config.get("mu"));
-		}
-		
 		int numDocs = 1000;
 		if (config.get("num-docs") != null) {
 			numDocs = Integer.parseInt(config.get("num-docs"));
 		}
-
-		ScorerDirichletEntityInterpolated scorer = new ScorerDirichletEntityInterpolated();
-		scorer.setCollectionStats(cs);
-		scorer.setCategoryProbability(cp);
-		scorer.setParameter(scorer.PARAMETER_NAME, mu);
-
-		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
-		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
+		
+		String outDir = config.get("out-dir");
 		
 		Iterator<GQuery> queryIt = queries.iterator();
 		int i = 0;
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
+			query.applyStopper(stopper);
 
 			i++;
 			logger.info("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
 			
-			scorer.setQuery(query);
-		
-			SearchHits hits = index.runQuery(query, numDocs);
-			Map<Double, SearchHits> lambdaToSearchHits = new HashMap<Double, SearchHits>();
-			Iterator<SearchHit> hitIt = hits.iterator();
+			File queryDir = new File(outDir+"/"+query.getTitle());
+			if (!queryDir.exists())
+				queryDir.mkdirs();
+			
+			SearchHits initialHits = index.runQuery(query, numDocs);
+			Iterator<SearchHit> hitIt = initialHits.iterator();
 			while (hitIt.hasNext()) {
-				SearchHit hit = hitIt.next();
+				SearchHit doc = hitIt.next();
 				
-				FeatureVector dv = index.getDocVector(hit.getDocno(), null);
-				hit.setFeatureVector(dv);
-				hit.setLength(dv.getLength());
-
-				scorer.score(hit); // produces scores for all values of lambda
-
-				for (double lambda : scorer.getLambdaToScore().keySet()) {
-					SearchHit newHit = new SearchHit();
-					newHit.setDocno(hit.getDocno());
-					newHit.setScore(scorer.getScore(lambda));
-					
-					if (!lambdaToSearchHits.containsKey(lambda)) {
-						lambdaToSearchHits.put(lambda, new SearchHits());
+				Map<String, Double> termProbs = ScorerDirichletEntityInterpolated.getTermProbs(doc, query, cp);
+				try {
+					FileWriter out = new FileWriter(outDir+"/"+query.getTitle()+"/"+doc.getDocno());
+					for (String term : termProbs.keySet()) {
+						out.write(term+"\t"+termProbs.get(term)+"\n");
 					}
-					lambdaToSearchHits.get(lambda).add(newHit);
+					out.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+					System.exit(-1);
 				}
 			}
-			for (double lambda : lambdaToSearchHits.keySet()) {
-				output.setRunId(Double.toString(lambda));
-				SearchHits theseHits = lambdaToSearchHits.get(lambda);
-				theseHits.rank();
-				theseHits.crop(1000);
-				output.write(theseHits, query.getTitle());
-			}
 		}
-		output.close();
 	}
 
 }
