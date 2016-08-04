@@ -33,5 +33,13 @@ public class SearchHitsBatch {
 	public int getNumQueries() {
 		return queryToSearchHits.keySet().size();
 	}
+	
+	public void addBatchResults(SearchHitsBatch batchResults) {
+		Iterator<String> qit = batchResults.queryIterator();
+		while (qit.hasNext()) {
+			String query = qit.next();
+			queryToSearchHits.put(query, batchResults.getSearchHits(query));
+		}
+	}
 
 }

@@ -21,6 +21,7 @@ import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.readers.DocumentEntityReader;
+import edu.gslis.readers.QueryProbabilityReader;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.textrepresentation.FeatureVector;
@@ -54,6 +55,9 @@ public class RunEntityBackedRetrieval {
 		
 		
 		EntityProbability cp = new EntityExpectedProbability(de, wikiIndex, stopper);
+		
+		QueryProbabilityReader qpreader = new QueryProbabilityReader();
+		qpreader.setBasePath(config.get("entity-probs"));
 
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
@@ -79,6 +83,7 @@ public class RunEntityBackedRetrieval {
 		scorer.setCollectionStats(cs);
 		scorer.setCategoryProbability(cp);
 		scorer.setParameter(scorer.PARAMETER_NAME, mu);
+		scorer.setQueryProbabilityReader(qpreader);
 
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
@@ -87,6 +92,7 @@ public class RunEntityBackedRetrieval {
 		int i = 0;
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
+			query.applyStopper(stopper);
 
 			i++;
 			logger.info("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");

@@ -1,6 +1,7 @@
 package edu.gslis.evaluation.validators;
 
 import edu.gslis.eval.Qrels;
+import edu.gslis.evaluation.SearchHitsBatch;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.queries.GQueries;
 
@@ -20,8 +21,8 @@ public interface Validator {
 	
 	/**
 	 * Evaluate the model.
-	 * @return The average evaluation score
+	 * @return The SearchHitsBatch representing one unified run
 	 */
-	public double evaluate(Evaluator evaluator);
+	public SearchHitsBatch evaluate(Evaluator evaluator);
 
 }

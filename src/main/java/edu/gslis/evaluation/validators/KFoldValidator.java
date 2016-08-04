@@ -8,13 +8,14 @@ import java.util.Map;
 import java.util.Random;
 
 import edu.gslis.eval.Qrels;
+import edu.gslis.evaluation.SearchHitsBatch;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.queryrunning.QueryRunner;
 
-public abstract class KFoldValidator implements Validator, Runnable {
+public abstract class KFoldValidator implements Validator {
 	
 	protected Qrels qrels;
 	protected GQueries queries;
@@ -23,8 +24,6 @@ public abstract class KFoldValidator implements Validator, Runnable {
 	
 	protected QueryRunner runner;
 	protected Evaluator evaluator;
-	
-	private double map;
 	
 	public KFoldValidator(QueryRunner runner) {
 		this(runner, 10);
@@ -51,16 +50,19 @@ public abstract class KFoldValidator implements Validator, Runnable {
 		this.evaluator = evaluator;
 	}
 	
-	public double evaluate(Evaluator evaluator) {
-		double metric = 0.0;
-		
+	public SearchHitsBatch evaluate(Evaluator evaluator) {
+		Random r = new Random();
+		return evaluate(r.nextLong(), evaluator);
+	}
+
+	public SearchHitsBatch evaluate(long seed, Evaluator evaluator) {
 		List<GQuery> queryList = new ArrayList<GQuery>();
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext())
 			queryList.add(queryIt.next());
 
 		// Partition the dataset
-		Collections.shuffle(queryList, new Random(11111));
+		Collections.shuffle(queryList, new Random(seed));
 		List<List<GQuery>> queryChunks = new ArrayList<List<GQuery>>();
 		for (int i = 0; i < queryList.size(); i++) {
 			int c = i % k; // the chunk to use
@@ -72,6 +74,8 @@ public abstract class KFoldValidator implements Validator, Runnable {
 		}
 		
 		System.err.println("Split into "+queryChunks.size()+" chunks.");
+		
+		SearchHitsBatch batchResults = new SearchHitsBatch();
 		
 		// Run the evaluation
 		for (int t = 0; t < k; t++) { // t is the test chunk
@@ -103,21 +107,10 @@ public abstract class KFoldValidator implements Validator, Runnable {
 			// Test
 			System.err.println("\tTesting...");
 			runner.run(numResults);
-			double foldMetric = evaluator.evaluate(runner.getBatchResults(), qrels);
-			System.err.println("\tMetric for fold "+t+": "+foldMetric);
-			metric += foldMetric;
+			batchResults.addBatchResults(runner.getBatchResults());
 		}
 		
-		metric /= k;
-		return metric;
-	}
-	
-	public void run() {
-		map = evaluate(this.evaluator);
-	}
-	
-	public double getMap() {
-		return map;
+		return batchResults;
 	}
 	
 	public abstract Map<String, Double> sweep(GQueries queries, Evaluator evaluator);

@@ -15,9 +15,7 @@ import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
-import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
-import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Configuration;
 import edu.gslis.utils.SimpleConfiguration;
 import edu.gslis.utils.Stopper;
@@ -67,7 +65,7 @@ public class RunBaselineRetrieval {
 			scorer.setQuery(query);
 			
 			SearchHits hits = index.runQuery(query, numDocs);
-			Iterator<SearchHit> hitIt = hits.iterator();
+			/*Iterator<SearchHit> hitIt = hits.iterator();
 			while (hitIt.hasNext()) {
 				SearchHit hit = hitIt.next();
 				FeatureVector dv = index.getDocVector(hit.getDocID(), null);
@@ -75,7 +73,7 @@ public class RunBaselineRetrieval {
 				hit.setLength(dv.getLength());
 				hit.setScore(scorer.score(hit));
 			}
-			hits.rank();
+			hits.rank();*/
 			output.write(hits, query.getTitle());
 		}
 	}

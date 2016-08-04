@@ -14,24 +14,23 @@ import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.utils.Stopper;
 
-public class DoubleEntityRunner extends GenericRunner {
+public class EntityRunner extends GenericRunner {
 	
-	private static final Logger logger = LoggerFactory.getLogger(DoubleEntityRunner.class);
+	private static final Logger logger = LoggerFactory.getLogger(EntityRunner.class);
 	
 	public static final String DOCUMENT_WEIGHT = "document";
 	public static final String WIKI_WEIGHT = "wiki";
-	public static final String SELF_WEIGHT = "self";
 
 	private IndexWrapperIndriImpl index;
 	private QueryProbabilityReader qpreader;
 	private Stopper stopper;
 	
-	public DoubleEntityRunner(IndexWrapperIndriImpl index, QueryProbabilityReader qpreader, Stopper stopper) {
+	public EntityRunner(IndexWrapperIndriImpl index, QueryProbabilityReader qpreader, Stopper stopper) {
 		this.index = index;
 		this.qpreader = qpreader;
 		this.stopper = stopper;
 	}
-	
+
 	public void run(int numResults) {
 		batchResults = new SearchHitsBatch();
 		Iterator<GQuery> queryIt = queries.iterator();
@@ -48,8 +47,6 @@ public class DoubleEntityRunner extends GenericRunner {
 				Map<String, Double> termProbsDoc = qpreader.getTermProbs();
 				qpreader.readFileRelative("entityProbsWiki/"+query.getTitle()+"/"+doc.getDocno());
 				Map<String, Double> termProbsWiki = qpreader.getTermProbs();
-				qpreader.readFileRelative("entityProbsSelf/"+query.getTitle()+"/"+doc.getDocno());
-				Map<String, Double> termProbsSelf = qpreader.getTermProbs();
 
 				double logLikelihood = 0.0;
 				Iterator<String> queryIterator = query.getFeatureVector().iterator();
@@ -58,14 +55,12 @@ public class DoubleEntityRunner extends GenericRunner {
 					logger.debug("Scoring feature: "+feature);
 
 					double docProb = termProbsDoc.get(feature);
+
 					double entityWikiProb = termProbsWiki.get(feature);
-					double entitySelfProb = termProbsSelf.get(feature);
 					logger.debug("Probability for term "+feature+" in wiki: "+entityWikiProb);
-					logger.debug("Probability for term "+feature+" in self: "+entitySelfProb);
 
 					double pr = params.get(DOCUMENT_WEIGHT)*docProb +
-							params.get(WIKI_WEIGHT)*entityWikiProb +
-							params.get(SELF_WEIGHT)*entitySelfProb;
+							params.get(WIKI_WEIGHT)*entityWikiProb;
 					double queryWeight = query.getFeatureVector().getFeatureWeight(feature);
 					logLikelihood += queryWeight * Math.log(pr);
 				}

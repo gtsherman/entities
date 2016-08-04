@@ -1,8 +1,15 @@
 package edu.gslis.main;
 
+import java.io.BufferedWriter;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.util.Iterator;
+
 import edu.gslis.eval.Qrels;
+import edu.gslis.evaluation.SearchHitsBatch;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
 import edu.gslis.evaluation.validators.RMValidator;
+import edu.gslis.patches.FormattedOutputTrecEval;
 import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
@@ -58,9 +65,17 @@ public class RunRMValidation {
 		}
 		double map = sum /= maps.size();
 		System.out.println("Average MAP: "+map);*/
-			
-		double map = validator.evaluate(new MAPEvaluator());
-		System.out.println("Average MAP: "+map);
+
+		SearchHitsBatch batchResults = validator.evaluate(new MAPEvaluator());
+		
+		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
+		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
+		
+		Iterator<String> qit = batchResults.queryIterator();
+		while (qit.hasNext()) {
+			String query = qit.next();
+			output.write(batchResults.getSearchHits(query), query);			
+		}
 	}
 
 }

@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import edu.gslis.docscoring.QueryDocScorer;
 import edu.gslis.entities.docscoring.support.EntityProbability;
 import edu.gslis.queries.GQuery;
+import edu.gslis.readers.QueryProbabilityReader;
 import edu.gslis.searchhits.SearchHit;
 
 public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
@@ -21,6 +22,7 @@ public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
 	public double EPSILON = 1.0;
 	
 	private EntityProbability catProb;
+	private QueryProbabilityReader qpreader;
 	
 	private Map<Double, Double> lambdaToScore;
 	
@@ -35,9 +37,20 @@ public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
 	public void setCategoryProbability(EntityProbability cp) {
 		this.catProb = cp;
 	}
+	
+	public void setQueryProbabilityReader(QueryProbabilityReader qpreader) {
+		this.qpreader = qpreader;
+	}
 
 	public double score(SearchHit doc) {
-		Map<String, Double> termProbs = getTermProbs(doc, gQuery, catProb);
+		Map<String, Double> termProbs;
+		if (qpreader == null) {
+			logger.debug("Computing fresh query probabilities");
+			termProbs = getTermProbs(doc, gQuery, catProb);
+		} else {
+			logger.debug("Reading precomputed query probabilities");
+			termProbs = getTermProbs(doc, gQuery, qpreader);
+		}
 		
 		Map<Double, Double> lambdaToScore = new HashMap<Double, Double>();
 		for (double lambda = 0.0; lambda <= 1.0; lambda += 0.1) {
@@ -53,6 +66,8 @@ public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
 		Iterator<String> queryIterator = gQuery.getFeatureVector().iterator();
 		while(queryIterator.hasNext()) {
 			String feature = queryIterator.next();
+			logger.debug("Scoring term: "+feature);
+			
 			double docFreq = doc.getFeatureVector().getFeatureWeight(feature);
 			double docLength = doc.getLength();
 			double categoryProb = termProbs.get(feature);
@@ -83,6 +98,11 @@ public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
 		}		
 
 		return termProbs;
+	}
+	
+	public static Map<String, Double> getTermProbs(SearchHit doc, GQuery gQuery, QueryProbabilityReader qpreader) {
+		qpreader.readFileRelative(gQuery.getTitle()+"/"+doc.getDocno());
+		return qpreader.getTermProbs();
 	}
 	
 	private void setLambdaToScore(Map<Double, Double> lambdaToScore) {
