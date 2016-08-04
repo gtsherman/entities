@@ -10,7 +10,7 @@ import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 
-public class QueryDocs extends AbstractReader {
+public class QueryDocsReader extends AbstractReader {
 
 	Map<String, SearchHits> queryDocs;
 

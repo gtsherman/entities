@@ -15,7 +15,7 @@ import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
-import edu.gslis.readers.QueryDocs;
+import edu.gslis.readers.QueryDocsReader;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.utils.Configuration;
@@ -42,7 +42,7 @@ public class PrecomputeDocumentProbabilities {
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 		
-		QueryDocs qdocs = new QueryDocs();
+		QueryDocsReader qdocs = new QueryDocsReader();
 		String baseDocs = config.get("base-docs");
 		if (baseDocs != null) {
 			qdocs.readFileAbsolute(baseDocs);
