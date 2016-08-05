@@ -11,6 +11,9 @@ import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.queries.expansion.FeedbackRelevanceModel;
+import edu.gslis.readers.QueryEntitiesReader;
+import edu.gslis.searchhits.SearchHit;
+import edu.gslis.searchhits.SearchHits;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Configuration;
 import edu.gslis.utils.SimpleConfiguration;
@@ -31,6 +34,13 @@ public class CreateRMs {
 		queries.read(config.get("queries"));
 		String outDir = config.get("out-dir");
 		
+		QueryEntitiesReader qdocs = new QueryEntitiesReader();
+		String queryEntities = config.get("query-entities");
+		if (queryEntities != null) {
+			qdocs.readFileAbsolute(queryEntities);
+		}
+		
+		
 		int fbDocs = 20;
 		if (config.get("fb-docs") != null) {
 			fbDocs = Integer.parseInt(config.get("fb-docs"));
@@ -42,12 +52,16 @@ public class CreateRMs {
 		}
 		
 		Iterator<GQuery> queryIt = queries.iterator();
-		int i = 0;
+		int i = 1;
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
 			query.applyStopper(stopper);
 			
 			logger.info("Working on query "+query.getTitle()+". ("+i+++"/"+queries.numQueries()+")");
+
+			if (query.getFeatureVector().getLength() == 0) {
+				continue;
+			}
 
 			// RM built on target index
 			FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
@@ -56,11 +70,24 @@ public class CreateRMs {
 			rm.setTermCount(fbTerms);
 			rm.setStopper(stopper);
 			rm.setOriginalQuery(query);
+			
+			if (queryEntities != null) {
+				SearchHits hits = qdocs.getEntitiesForQuery(query);
+				hits.crop(fbDocs);
+				Iterator<SearchHit> hitit = hits.iterator();
+				while (hitit.hasNext()) {
+					SearchHit hit = hitit.next();
+					hit.setDocID(index.getDocId(hit.getDocno()));
+				}
+				rm.setRes(hits);
+			}
+
 			rm.build();
+
 			FeatureVector rmVec = rm.asGquery().getFeatureVector();
 			rmVec.normalize();
 			
-			FileWriter out = new FileWriter(outDir+"/"+query.getTitle()+"_wikiRM");
+			FileWriter out = new FileWriter(outDir+"/"+query.getTitle());
 			out.write(rmVec.toString(50));
 			out.close();
 		}
