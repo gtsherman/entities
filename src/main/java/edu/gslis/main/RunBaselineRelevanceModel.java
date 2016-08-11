@@ -8,9 +8,6 @@ import java.util.Iterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import edu.gslis.docscoring.support.CollectionStats;
-import edu.gslis.docscoring.support.IndexBackedCollectionStats;
-import edu.gslis.entities.docscoring.ScorerDirichlet;
 import edu.gslis.patches.FormattedOutputTrecEval;
 import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
@@ -39,14 +36,6 @@ public class RunBaselineRelevanceModel {
 		GQueriesJsonImpl queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
 		
-		CollectionStats cs = new IndexBackedCollectionStats();
-		cs.setStatSource(config.get("index"));
-		
-		double mu = 2500;
-		if (config.get("mu") != null) {
-			mu = Double.parseDouble(config.get("mu"));
-		}
-
 		int numDocs = 1000;
 		if (config.get("num-docs") != null) {
 			numDocs = Integer.parseInt(config.get("num-docs"));
@@ -66,10 +55,6 @@ public class RunBaselineRelevanceModel {
 		if (config.get("original-query-weight") != null) {
 			origQueryWeight = Double.parseDouble(config.get("original-query-weight"));
 		}
-
-		ScorerDirichlet scorer = new ScorerDirichlet();
-		scorer.setCollectionStats(cs);
-		scorer.setParameter(scorer.PARAMETER_NAME, mu);
 
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
@@ -93,16 +78,13 @@ public class RunBaselineRelevanceModel {
 			FeatureVector rmVec = rm.asGquery().getFeatureVector();
 			rmVec.normalize();
 
-			FeatureVector rm3 = FeatureVector.interpolate(query.getFeatureVector(), rmVec, origQueryWeight);
+			//FeatureVector rm3 = FeatureVector.interpolate(query.getFeatureVector(), rmVec, origQueryWeight);
 			GQuery rmQuery = new GQuery();
-			rmQuery.setFeatureVector(rm3);
+			rmQuery.setFeatureVector(rmVec);
 			rmQuery.setTitle(query.getTitle());
-			
-			scorer.setQuery(rmQuery);
 			
 			SearchHits hits = index.runQuery(rmQuery, numDocs);
 			hits.rank();
-			hits.crop(1000);
 			output.write(hits, query.getTitle());
 		}
 		output.close();

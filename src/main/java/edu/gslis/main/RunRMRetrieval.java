@@ -54,6 +54,16 @@ public class RunRMRetrieval {
 		if (config.get("fb-terms") != null) {
 			fbTerms = Integer.parseInt(config.get("fb-terms"));
 		}
+
+		Double origQueryWeight = null;
+		if (config.get("original-query-weight") != null) {
+			origQueryWeight = Double.parseDouble(config.get("original-query-weight"));
+		}
+		
+		double rmCombine = 0.5;
+		if (config.get("rm-combination-weight") != null) {
+			rmCombine = Double.parseDouble(config.get("rm-combination-weight"));
+		}
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("rm1", outputWriter);
@@ -77,7 +87,7 @@ public class RunRMRetrieval {
 				if (rmDocsDir2 != null) {
 					int rmVecLength = rmVec.getFeatureCount();
 					rmReader.readFile(new File(rmDocsDir2+"/"+query.getTitle()));
-					rmVec = FeatureVector.interpolate(rmVec, rmReader.getVector(), 0.5);
+					rmVec = FeatureVector.interpolate(rmVec, rmReader.getVector(), rmCombine);
 					rmVec.clip(rmVecLength);
 				}
 			} else {
@@ -89,6 +99,11 @@ public class RunRMRetrieval {
 				rm.setOriginalQuery(query);
 				rm.build();
 				rmVec = rm.asGquery().getFeatureVector();
+				rmVec.normalize();
+			}
+			
+			if (origQueryWeight != null) {
+				rmVec = FeatureVector.interpolate(query.getFeatureVector(), rmVec, origQueryWeight);
 			}
 			
 			GQuery newQuery = new GQuery();
