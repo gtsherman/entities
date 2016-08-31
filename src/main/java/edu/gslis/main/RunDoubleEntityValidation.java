@@ -42,7 +42,7 @@ public class RunDoubleEntityValidation {
 		
 		DoubleEntityRunner runner = new DoubleEntityRunner(index, qpreader, stopper);
 
-		DoubleEntityValidator validator = new DoubleEntityValidator(runner, 5);
+		DoubleEntityValidator validator = new DoubleEntityValidator(runner, 10);
 		validator.setQueries(queries);
 		validator.setQrels(qrels);
 		

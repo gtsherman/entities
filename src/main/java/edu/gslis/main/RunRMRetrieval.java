@@ -63,6 +63,8 @@ public class RunRMRetrieval {
 		double rmCombine = 0.5;
 		if (config.get("rm-combination-weight") != null) {
 			rmCombine = Double.parseDouble(config.get("rm-combination-weight"));
+		} else if (args.length > 1) {
+			rmCombine = Double.parseDouble(args[1]);
 		}
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
