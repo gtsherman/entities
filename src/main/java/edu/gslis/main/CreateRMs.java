@@ -21,7 +21,7 @@ import edu.gslis.utils.Stopper;
 
 public class CreateRMs {
 
-	static final Logger logger = LoggerFactory.getLogger(CreateDocumentClusters.class);
+	static final Logger logger = LoggerFactory.getLogger(CreateRMs.class);
 
 	public static void main(String[] args) throws IOException {
 		Configuration config = new SimpleConfiguration();
@@ -32,7 +32,7 @@ public class CreateRMs {
 		Stopper stopper = new Stopper(config.get("stoplist"));
 		GQueriesJsonImpl queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
-		String outDir = config.get("out-dir");
+		String outDir = config.get("rms-dir");
 		
 		QueryEntitiesReader qdocs = new QueryEntitiesReader();
 		String queryEntities = config.get("query-entities");

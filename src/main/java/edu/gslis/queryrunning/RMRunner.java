@@ -32,7 +32,7 @@ public class RMRunner extends GenericRunner {
 			GQuery query = queryIt.next();
 			query.applyStopper(stopper);
 
-			rmReader.readFileRelative(query.getTitle()+"_targetRM");
+			rmReader.readFileRelative(query.getTitle());
 			FeatureVector targetRM = rmReader.getVector();
 			
 			FeatureVector rm3 = FeatureVector.interpolate(query.getFeatureVector(), targetRM, params.get(ORIG_QUERY_WEIGHT));

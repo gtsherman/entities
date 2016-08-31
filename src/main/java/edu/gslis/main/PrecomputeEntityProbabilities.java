@@ -47,7 +47,8 @@ public class PrecomputeEntityProbabilities {
 		queries.read(config.get("queries"));
 		
 		DocumentEntityReader de = new DocumentEntityReader();
-		de.setLimit(Integer.parseInt(args[1]));
+		int numEntities = Integer.parseInt(args[1]);
+		de.setLimit(numEntities);
 		de.readFileAbsolute(config.get("document-entities-file"));
 		
 		QueryDocsReader qdocs = new QueryDocsReader();
@@ -74,7 +75,7 @@ public class PrecomputeEntityProbabilities {
 			numDocs = Integer.parseInt(config.get("num-docs"));
 		}
 		
-		String outDir = config.get("out-dir");
+		String dataDir = config.get("entity-probability-data-dir");
 		
 		Iterator<GQuery> queryIt = queries.iterator();
 		int i = 0;
@@ -85,7 +86,7 @@ public class PrecomputeEntityProbabilities {
 			i++;
 			logger.info("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
 			
-			File queryDir = new File(outDir+"/"+query.getTitle());
+			File queryDir = new File(dataDir+"."+numEntities+"/"+query.getTitle());
 			if (!queryDir.exists())
 				queryDir.mkdirs();
 			
@@ -108,7 +109,7 @@ public class PrecomputeEntityProbabilities {
 				
 				Map<String, Double> termProbs = ScorerDirichletEntityInterpolated.getTermProbs(doc, query, cp);
 				try {
-					FileWriter out = new FileWriter(outDir+"/"+query.getTitle()+"/"+doc.getDocno());
+					FileWriter out = new FileWriter(dataDir+"."+numEntities+"/"+query.getTitle()+"/"+doc.getDocno());
 					for (String term : termProbs.keySet()) {
 						out.write(term+"\t"+termProbs.get(term)+"\n");
 					}

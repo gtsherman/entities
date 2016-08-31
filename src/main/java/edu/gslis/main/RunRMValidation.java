@@ -30,7 +30,7 @@ public class RunRMValidation {
 		GQueries queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
 		Qrels qrels = new Qrels(config.get("qrels"), false, 1);
-		String rmsDir = config.get("out-dir");
+		String rmsDir = config.get("rms-dir");
 		
 		RelevanceModelReader rmReader = new RelevanceModelReader();
 		rmReader.setBasePath(rmsDir);
