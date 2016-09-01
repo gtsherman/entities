@@ -26,10 +26,16 @@ public class DoubleEntityRunner extends GenericRunner {
 	private QueryProbabilityReader qpreader;
 	private Stopper stopper;
 	
+	private int numEntities = 10;
+	
 	public DoubleEntityRunner(IndexWrapperIndriImpl index, QueryProbabilityReader qpreader, Stopper stopper) {
 		this.index = index;
 		this.qpreader = qpreader;
 		this.stopper = stopper;
+	}
+	
+	public void setNumEntities(int numEntities) {
+		this.numEntities = numEntities;
 	}
 	
 	public void run(int numResults) {
@@ -46,9 +52,9 @@ public class DoubleEntityRunner extends GenericRunner {
 
 				qpreader.readFileRelative("docProbs/"+query.getTitle()+"/"+doc.getDocno());
 				Map<String, Double> termProbsDoc = qpreader.getTermProbs();
-				qpreader.readFileRelative("entityProbsWiki/"+query.getTitle()+"/"+doc.getDocno());
+				qpreader.readFileRelative("entityProbsWiki."+numEntities+"/"+query.getTitle()+"/"+doc.getDocno());
 				Map<String, Double> termProbsWiki = qpreader.getTermProbs();
-				qpreader.readFileRelative("entityProbsSelf/"+query.getTitle()+"/"+doc.getDocno());
+				qpreader.readFileRelative("entityProbsSelf."+numEntities+"/"+query.getTitle()+"/"+doc.getDocno());
 				Map<String, Double> termProbsSelf = qpreader.getTermProbs();
 
 				double logLikelihood = 0.0;

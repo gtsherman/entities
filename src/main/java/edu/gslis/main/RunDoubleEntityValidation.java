@@ -34,6 +34,14 @@ public class RunDoubleEntityValidation {
 		Qrels qrels = new Qrels(config.get("qrels"), false, 1);
 		String forQueryProbs = config.get("for-query-probs");
 		
+		int numEntities = 10;
+		if (config.get("num-entities") != null) {
+			numEntities = Integer.parseInt(config.get("num-entities"));
+		}
+		if (args[2] != null) {
+			numEntities = Integer.parseInt(args[2]);
+		}
+		
 		QueryProbabilityReader qpreader = new QueryProbabilityReader();
 		qpreader.setBasePath(forQueryProbs);
 		
@@ -41,6 +49,7 @@ public class RunDoubleEntityValidation {
 		cs.setStatSource(config.get("index"));
 		
 		DoubleEntityRunner runner = new DoubleEntityRunner(index, qpreader, stopper);
+		runner.setNumEntities(numEntities);
 
 		DoubleEntityValidator validator = new DoubleEntityValidator(runner, 10);
 		validator.setQueries(queries);
