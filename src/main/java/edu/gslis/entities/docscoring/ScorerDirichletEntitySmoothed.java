@@ -27,6 +27,7 @@ public class ScorerDirichletEntitySmoothed extends QueryDocScorer {
 		setParameter(PARAMETER_NAME, 2500);
 	}
 
+	@Override
 	public void setQuery(GQuery query) {
 		this.gQuery = query;
 	}

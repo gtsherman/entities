@@ -15,9 +15,9 @@ import edu.gslis.queries.GQuery;
 import edu.gslis.queries.expansion.FeedbackRelevanceModel;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.textrepresentation.FeatureVector;
-import edu.gslis.utils.Configuration;
-import edu.gslis.utils.SimpleConfiguration;
 import edu.gslis.utils.Stopper;
+import edu.gslis.utils.config.Configuration;
+import edu.gslis.utils.config.SimpleConfiguration;
 
 public class RunBaselineRelevanceModel {
 	
@@ -51,11 +51,6 @@ public class RunBaselineRelevanceModel {
 			fbTerms = Integer.parseInt(config.get("fb-terms"));
 		}
 		
-		double origQueryWeight = 0.5;
-		if (config.get("original-query-weight") != null) {
-			origQueryWeight = Double.parseDouble(config.get("original-query-weight"));
-		}
-
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
 		

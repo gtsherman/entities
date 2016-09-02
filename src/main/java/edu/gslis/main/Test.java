@@ -11,8 +11,8 @@ import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHits;
-import edu.gslis.utils.Configuration;
-import edu.gslis.utils.SimpleConfiguration;
+import edu.gslis.utils.config.Configuration;
+import edu.gslis.utils.config.SimpleConfiguration;
 
 public class Test {
 

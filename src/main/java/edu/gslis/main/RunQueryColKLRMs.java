@@ -7,8 +7,8 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 
-import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.patches.FormattedOutputTrecEval;
+import edu.gslis.patches.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
@@ -16,9 +16,9 @@ import edu.gslis.queries.expansion.FeedbackRelevanceModel;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.similarity.KLScorer;
 import edu.gslis.textrepresentation.FeatureVector;
-import edu.gslis.utils.Configuration;
-import edu.gslis.utils.SimpleConfiguration;
 import edu.gslis.utils.Stopper;
+import edu.gslis.utils.config.Configuration;
+import edu.gslis.utils.config.SimpleConfiguration;
 
 public class RunQueryColKLRMs {
 
@@ -75,7 +75,7 @@ public class RunQueryColKLRMs {
 			FeatureVector combined = FeatureVector.interpolate(rmVec, rmVecWiki, origWeight);
 			
 			for (int i = 0; i <= 10; i++) {
-				double qWeight = (double)i / 10.0;
+				double qWeight = i / 10.0;
 				FeatureVector rm3 = FeatureVector.interpolate(query.getFeatureVector(), combined, qWeight);
 				GQuery rm3Q = new GQuery();
 				rm3Q.setFeatureVector(rm3);

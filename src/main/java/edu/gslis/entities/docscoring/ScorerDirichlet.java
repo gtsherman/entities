@@ -25,6 +25,7 @@ public class ScorerDirichlet extends QueryDocScorer {
 	public ScorerDirichlet() {
 		setParameter(PARAMETER_NAME, 2500);
 	}
+	@Override
 	public void setQuery(GQuery query) {
 		this.gQuery = query;
 	}

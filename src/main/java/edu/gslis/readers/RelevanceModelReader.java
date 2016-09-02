@@ -10,6 +10,7 @@ public class RelevanceModelReader extends AbstractReader {
 
 	private FeatureVector model;
 	
+	@Override
 	public void readFile(File file) {
 		model = new FeatureVector(null);
 		try {

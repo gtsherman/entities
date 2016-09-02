@@ -18,9 +18,9 @@ import edu.gslis.queries.GQuery;
 import edu.gslis.readers.QueryDocsReader;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
-import edu.gslis.utils.Configuration;
-import edu.gslis.utils.SimpleConfiguration;
 import edu.gslis.utils.Stopper;
+import edu.gslis.utils.config.Configuration;
+import edu.gslis.utils.config.SimpleConfiguration;
 
 public class PrecomputeDocumentProbabilities {
 	

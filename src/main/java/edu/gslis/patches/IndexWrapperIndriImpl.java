@@ -96,7 +96,7 @@ public class IndexWrapperIndriImpl implements IndexWrapper{
 				SearchHit hit = new SearchHit();
 				hit.setDocID(r.document);
 				hit.setScore(r.score);
-                double length = (double)index.documentLength(r.document);
+                double length = index.documentLength(r.document);
                 
                 // TODO: Do we need it?
                 //IndriDocument doc = new IndriDocument (index);
@@ -125,7 +125,7 @@ public class IndexWrapperIndriImpl implements IndexWrapper{
 				hit.setDocID(r.document);
 				hit.setScore(r.score);
 
-                double length = (double)index.documentLength(r.document);
+                double length = index.documentLength(r.document);
                 hit.setLength(length);
 
 				hit.setDocno(docnos[k++]);
@@ -139,7 +139,7 @@ public class IndexWrapperIndriImpl implements IndexWrapper{
 	
 	public double docCount() {
 		try {
-			return (double)index.documentCount();
+			return index.documentCount();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -148,7 +148,7 @@ public class IndexWrapperIndriImpl implements IndexWrapper{
 
 	public double termCount() {
 		try {
-			return (double)index.termCount();
+			return index.termCount();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -161,7 +161,7 @@ public class IndexWrapperIndriImpl implements IndexWrapper{
 
 	public double docFreq(String term) {
 		try {
-			return (double)index.documentCount(term);
+			return index.documentCount(term);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -170,7 +170,7 @@ public class IndexWrapperIndriImpl implements IndexWrapper{
 
 	public double termFreq(String term) {
 		try {
-			return (double)index.termCount(term);
+			return index.termCount(term);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -226,7 +226,7 @@ public class IndexWrapperIndriImpl implements IndexWrapper{
 	public double getDocLength(int docID) {
 		double length = 0; 
 		try {
-			length = (double)index.documentLength(docID);
+			length = index.documentLength(docID);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

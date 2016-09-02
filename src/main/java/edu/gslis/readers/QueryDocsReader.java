@@ -14,6 +14,7 @@ public class QueryDocsReader extends AbstractReader {
 
 	Map<String, SearchHits> queryDocs;
 
+	@Override
 	public void readFile(File file) {
 		queryDocs = new HashMap<String, SearchHits>();
 		try {
