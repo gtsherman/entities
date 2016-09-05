@@ -14,7 +14,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   
-  <repositories>
+  <!--repositories>
 	  <repository>
 	   <name>ir-libs</name>
 	   <id>ir-libs</id>
@@ -28,7 +28,7 @@
 		   <updatePolicy>never</updatePolicy>
 	   </releases>
 	  </repository>
-  </repositories>
+  </repositories-->
   <build>
         <plugins>
           <!-- plugin>
@@ -76,6 +76,11 @@
 		<groupId>edu.gslis</groupId>
 		<artifactId>ir-utils</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+    	<groupId>edu.gslis</groupId>
+    	<artifactId>cross-validation</artifactId>
+    	<version>0.0.1-SNAPSHOT</version>
     </dependency>
     <dependency>
 		<groupId>edu.gslis</groupId>

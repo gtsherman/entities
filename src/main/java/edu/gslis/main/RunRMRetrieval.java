@@ -6,11 +6,8 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import edu.gslis.patches.FormattedOutputTrecEval;
-import edu.gslis.patches.IndexWrapperIndriImpl;
+import edu.gslis.indexes.IndexWrapperIndriImpl;
+import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.queries.expansion.FeedbackRelevanceModel;
@@ -22,8 +19,6 @@ import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
 
 public class RunRMRetrieval {
-
-	static final Logger logger = LoggerFactory.getLogger(CreateDocumentClusters.class);
 
 	public static void main(String[] args) {
 		Configuration config = new SimpleConfiguration();
@@ -76,7 +71,7 @@ public class RunRMRetrieval {
 			GQuery query = queryIt.next();
 			query.applyStopper(stopper);
 			
-			logger.info("Working on query "+query.getTitle()+". ("+i+++"/"+queries.numQueries()+")");
+			System.err.println("Working on query "+query.getTitle()+". ("+i+++"/"+queries.numQueries()+")");
 
 			if (query.getFeatureVector().getLength() == 0) {
 				continue;

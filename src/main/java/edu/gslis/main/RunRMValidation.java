@@ -6,15 +6,17 @@ import java.io.Writer;
 import java.util.Iterator;
 
 import edu.gslis.eval.Qrels;
-import edu.gslis.evaluation.SearchHitsBatch;
+import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
-import edu.gslis.evaluation.validators.RMValidator;
-import edu.gslis.patches.FormattedOutputTrecEval;
-import edu.gslis.patches.IndexWrapperIndriImpl;
+import edu.gslis.evaluation.evaluators.NDCGEvaluator;
+import edu.gslis.evaluation.running.QueryRunner;
+import edu.gslis.evaluation.running.runners.RMRunner;
+import edu.gslis.evaluation.validators.KFoldValidator;
+import edu.gslis.indexes.IndexWrapperIndriImpl;
+import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
-import edu.gslis.queryrunning.RMRunner;
-import edu.gslis.readers.RelevanceModelReader;
+import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
@@ -31,42 +33,19 @@ public class RunRMValidation {
 		queries.read(config.get("queries"));
 		Qrels qrels = new Qrels(config.get("qrels"), false, 1);
 		String rmsDir = config.get("rms-dir");
+		String targetMetric = config.get("target-metric");
 		
-		RelevanceModelReader rmReader = new RelevanceModelReader();
-		rmReader.setBasePath(rmsDir);
-		
-		RMRunner runner = new RMRunner(index, rmReader, stopper);
-
-		//List<Double> maps = new ArrayList<Double>();
-		//Map<Thread, Runnable> threads = new HashMap<Thread, Runnable>();
-		//for (int i = 0; i < 10; i++) {
-			RMValidator validator = new RMValidator(runner);
-			validator.setQueries(queries);
-			validator.setQrels(qrels);
-		/*	validator.setEvaluator(new MAPEvaluator());
-			
-			System.err.println("Running thread "+i);
-			Thread t = new Thread(validator);
-			t.start();
-			threads.put(t, validator);
+		Evaluator evaluator = new MAPEvaluator();
+		if (targetMetric.equalsIgnoreCase("ndcg")) {
+			evaluator = new NDCGEvaluator();
 		}
 		
-		int i = 0;
-		for (Thread t : threads.keySet()) {
-			t.join();
-			double map = ((SecondOrderRMValidator)threads.get(t)).getMap();
-			System.err.println("Map for thread "+(i++)+": "+map);
-			maps.add(map);
-		}
+		long seed = Long.parseLong(args[1]);
+		
+		QueryRunner runner = new RMRunner(index, stopper, rmsDir);
+		KFoldValidator validator = new KFoldValidator(runner);
 
-		double sum = 0.0;
-		for (double map : maps) {
-			sum += map;
-		}
-		double map = sum /= maps.size();
-		System.out.println("Average MAP: "+map);*/
-
-		SearchHitsBatch batchResults = validator.evaluate(new MAPEvaluator());
+		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator, qrels);
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);

@@ -6,15 +6,18 @@ import java.io.Writer;
 import java.util.Iterator;
 
 import edu.gslis.eval.Qrels;
-import edu.gslis.evaluation.SearchHitsBatch;
+import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
-import edu.gslis.evaluation.validators.EntityValidator;
-import edu.gslis.patches.FormattedOutputTrecEval;
-import edu.gslis.patches.IndexWrapperIndriImpl;
+import edu.gslis.evaluation.evaluators.NDCGEvaluator;
+import edu.gslis.evaluation.running.QueryRunner;
+import edu.gslis.evaluation.running.runners.EntityRunner;
+import edu.gslis.evaluation.validators.KFoldValidator;
+import edu.gslis.indexes.IndexWrapperIndriImpl;
+import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
-import edu.gslis.queryrunning.EntityRunner;
 import edu.gslis.readers.QueryProbabilityReader;
+import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
@@ -31,19 +34,22 @@ public class RunEntityValidation {
 		queries.read(config.get("queries"));
 		Qrels qrels = new Qrels(config.get("qrels"), false, 1);
 		String forQueryProbs = config.get("for-query-probs");
+		String targetMetric = config.get("target-metric");
 		
 		QueryProbabilityReader qpreader = new QueryProbabilityReader();
 		qpreader.setBasePath(forQueryProbs);
 		
-		EntityRunner runner = new EntityRunner(index, qpreader, stopper);
-
-		EntityValidator validator = new EntityValidator(runner, 10);
-		validator.setQueries(queries);
-		validator.setQrels(qrels);
-		
 		long seed = Long.parseLong(args[1]);
 		
-		SearchHitsBatch batchResults = validator.evaluate(seed, new MAPEvaluator());
+		Evaluator evaluator = new MAPEvaluator();
+		if (targetMetric.equalsIgnoreCase("ndcg")) {
+			evaluator = new NDCGEvaluator();
+		}
+		
+		QueryRunner runner = new EntityRunner(index, qpreader, stopper);
+		KFoldValidator validator = new KFoldValidator(runner, 10);
+		
+		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator, qrels);
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);

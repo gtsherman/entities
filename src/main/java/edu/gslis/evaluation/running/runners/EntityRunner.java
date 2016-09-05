@@ -1,20 +1,25 @@
-package edu.gslis.queryrunning;
+package edu.gslis.evaluation.running.runners;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import edu.gslis.evaluation.SearchHitsBatch;
-import edu.gslis.patches.IndexWrapperIndriImpl;
+import edu.gslis.eval.Qrels;
+import edu.gslis.evaluation.evaluators.Evaluator;
+import edu.gslis.evaluation.running.QueryRunner;
+import edu.gslis.indexes.IndexWrapperIndriImpl;
+import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
 import edu.gslis.readers.QueryProbabilityReader;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
+import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 
-public class EntityRunner extends GenericRunner {
+public class EntityRunner implements QueryRunner {
 	
 	private static final Logger logger = LoggerFactory.getLogger(EntityRunner.class);
 	
@@ -30,9 +35,36 @@ public class EntityRunner extends GenericRunner {
 		this.qpreader = qpreader;
 		this.stopper = stopper;
 	}
+	
+	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator, Qrels qrels) {
+		double maxMetric = 0.0;
 
-	public void run(int numResults) {
-		batchResults = new SearchHitsBatch();
+		Map<String, Double> bestParams = new HashMap<String, Double>();
+		Map<String, Double> currentParams = new HashMap<String, Double>();
+		
+		for (int origW = 0; origW <= 10; origW++) {
+			double origWeight = origW / 10.0;
+			currentParams.put(EntityRunner.DOCUMENT_WEIGHT, origWeight);
+			for (int wikiW = 0; wikiW <= 10-origW; wikiW++) {
+				double wikiWeight = wikiW / 10.0;
+				
+				currentParams.put(EntityRunner.WIKI_WEIGHT, wikiWeight);
+
+				SearchHitsBatch batchResults = run(queries, 100, currentParams);
+				
+				double metricVal = evaluator.evaluate(batchResults, qrels);
+				if (metricVal > maxMetric) {
+					maxMetric = metricVal;
+					bestParams.putAll(currentParams);
+				}
+			}
+		}
+		
+		return bestParams;
+	}
+
+	public SearchHitsBatch run(GQueries queries, int numResults, Map<String, Double> params) {
+		SearchHitsBatch batchResults = new SearchHitsBatch();
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
@@ -71,6 +103,7 @@ public class EntityRunner extends GenericRunner {
 			initialHits.rank();
 			batchResults.setSearchHits(query.getTitle(), initialHits);
 		}
+		return batchResults;
 	}
 
 }

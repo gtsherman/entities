@@ -1,22 +1,22 @@
-package edu.gslis.queryrunning;
+package edu.gslis.evaluation.running.runners;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import edu.gslis.evaluation.SearchHitsBatch;
-import edu.gslis.patches.IndexWrapperIndriImpl;
+import edu.gslis.eval.Qrels;
+import edu.gslis.evaluation.evaluators.Evaluator;
+import edu.gslis.evaluation.running.QueryRunner;
+import edu.gslis.indexes.IndexWrapperIndriImpl;
+import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
 import edu.gslis.readers.QueryProbabilityReader;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
+import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 
-public class DoubleEntityRunner extends GenericRunner {
-	
-	private static final Logger logger = LoggerFactory.getLogger(DoubleEntityRunner.class);
+public class DoubleEntityRunner implements QueryRunner {
 	
 	public static final String DOCUMENT_WEIGHT = "document";
 	public static final String WIKI_WEIGHT = "wiki";
@@ -34,12 +34,41 @@ public class DoubleEntityRunner extends GenericRunner {
 		this.stopper = stopper;
 	}
 	
+	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator, Qrels qrels) {
+		double maxMetric = 0.0;
+
+		Map<String, Double> bestParams = new HashMap<String, Double>();
+		Map<String, Double> currentParams = new HashMap<String, Double>();
+
+		for (int origW = 0; origW <= 10; origW++) {
+			double origWeight = origW / 10.0;
+			currentParams.put(DoubleEntityRunner.DOCUMENT_WEIGHT, origWeight);
+			for (int wikiW = 0; wikiW <= 10-origW; wikiW++) {
+				double wikiWeight = wikiW / 10.0;
+				double selfWeight = (10-(origW+wikiW)) / 10.0;
+				
+				currentParams.put(DoubleEntityRunner.WIKI_WEIGHT, wikiWeight);
+				currentParams.put(DoubleEntityRunner.SELF_WEIGHT, selfWeight);
+
+				SearchHitsBatch batchResults = run(queries, 100, currentParams);
+				
+				double metricVal = evaluator.evaluate(batchResults, qrels);
+				if (metricVal > maxMetric) {
+					maxMetric = metricVal;
+					bestParams.putAll(currentParams);
+				}
+			}
+		}
+		
+		return bestParams;
+	}
+
 	public void setNumEntities(int numEntities) {
 		this.numEntities = numEntities;
 	}
 	
-	public void run(int numResults) {
-		batchResults = new SearchHitsBatch();
+	public SearchHitsBatch run(GQueries queries, int numResults, Map<String, Double> params) {
+		SearchHitsBatch batchResults = new SearchHitsBatch();
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
@@ -61,13 +90,10 @@ public class DoubleEntityRunner extends GenericRunner {
 				Iterator<String> queryIterator = query.getFeatureVector().iterator();
 				while(queryIterator.hasNext()) {
 					String feature = queryIterator.next();
-					logger.debug("Scoring feature: "+feature);
 
 					double docProb = termProbsDoc.get(feature);
 					double entityWikiProb = termProbsWiki.get(feature);
 					double entitySelfProb = termProbsSelf.get(feature);
-					logger.debug("Probability for term "+feature+" in wiki: "+entityWikiProb);
-					logger.debug("Probability for term "+feature+" in self: "+entitySelfProb);
 
 					double pr = params.get(DOCUMENT_WEIGHT)*docProb +
 							params.get(WIKI_WEIGHT)*entityWikiProb +
@@ -82,6 +108,7 @@ public class DoubleEntityRunner extends GenericRunner {
 			initialHits.rank();
 			batchResults.setSearchHits(query.getTitle(), initialHits);
 		}
+		return batchResults;
 	}
 
 }

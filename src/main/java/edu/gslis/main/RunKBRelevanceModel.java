@@ -10,8 +10,8 @@ import org.slf4j.LoggerFactory;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
-import edu.gslis.patches.FormattedOutputTrecEval;
-import edu.gslis.patches.IndexWrapperIndriImpl;
+import edu.gslis.indexes.IndexWrapperIndriImpl;
+import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.queries.expansion.FeedbackRelevanceModel;

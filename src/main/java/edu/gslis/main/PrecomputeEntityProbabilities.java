@@ -15,7 +15,7 @@ import edu.gslis.entities.docscoring.ScorerDirichletEntityInterpolated;
 import edu.gslis.entities.docscoring.support.EntityExpectedProbability;
 import edu.gslis.entities.docscoring.support.EntityProbability;
 import edu.gslis.entities.docscoring.support.EntityPseudoDocumentProbability;
-import edu.gslis.patches.IndexWrapperIndriImpl;
+import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.readers.DocumentEntityReader;
