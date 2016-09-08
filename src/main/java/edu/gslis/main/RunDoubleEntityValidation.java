@@ -41,7 +41,7 @@ public class RunDoubleEntityValidation {
 		if (config.get("num-entities") != null) {
 			numEntities = Integer.parseInt(config.get("num-entities"));
 		}
-		if (args[2] != null) {
+		if (args.length > 2) {
 			numEntities = Integer.parseInt(args[2]);
 		}
 
