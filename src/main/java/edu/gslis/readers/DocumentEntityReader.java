@@ -13,6 +13,9 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import edu.gslis.searchhits.SearchHit;
+import edu.gslis.searchhits.SearchHits;
+
 public class DocumentEntityReader extends AbstractReader {
 	
 	static final Logger logger = LoggerFactory.getLogger(DocumentEntityReader.class);
@@ -57,6 +60,25 @@ public class DocumentEntityReader extends AbstractReader {
 			return new ArrayList<String>(documentEntities.get(document).keySet());
 		logger.warn("No document "+document+" recorded");
 		return new ArrayList<String>();
+	}
+	
+	public SearchHits getEntitiesAsSearchHits(String document) {
+		if (documentEntities.containsKey(document)) {
+			SearchHits hits = new SearchHits();
+
+			Set<String> entities = documentEntities.get(document).keySet();
+			for (String entity : entities) {
+				SearchHit hit = new SearchHit();
+				hit.setDocno(entity);
+				hit.setScore(documentEntities.get(document).get(entity));
+				hit.setQueryName(document);
+				hits.add(hit);
+			}
+			
+			return hits;
+		}
+		logger.warn("No document "+document+" recorded");
+		return new SearchHits();
 	}
 	
 	public Set<String> getAllEntities() {
