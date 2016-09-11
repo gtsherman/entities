@@ -10,16 +10,12 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 
 public class DocumentEntityReader extends AbstractReader {
 	
-	static final Logger logger = LoggerFactory.getLogger(DocumentEntityReader.class);
-
 	private int limit = 10;
 	
 	private Map<String, Map<String, Double>> documentEntities;
@@ -45,7 +41,7 @@ public class DocumentEntityReader extends AbstractReader {
 					}
 					documentEntities.get(document).put(entity, confidence);
 				} catch (ArrayIndexOutOfBoundsException e) {
-					logger.error("Error reading line: "+line);
+					System.err.println("Error reading line: "+line);
 				}
 			}
 			scanner.close();
@@ -58,11 +54,11 @@ public class DocumentEntityReader extends AbstractReader {
 	public List<String> getEntities(String document) {
 		if (documentEntities.containsKey(document))
 			return new ArrayList<String>(documentEntities.get(document).keySet());
-		logger.warn("No document "+document+" recorded");
+		System.err.println("No document "+document+" recorded");
 		return new ArrayList<String>();
 	}
 	
-	public SearchHits getEntitiesAsSearchHits(String document) {
+	public SearchHits getEntitiesAsSearchHits(String document, IndexWrapper index) {
 		if (documentEntities.containsKey(document)) {
 			SearchHits hits = new SearchHits();
 
@@ -70,6 +66,7 @@ public class DocumentEntityReader extends AbstractReader {
 			for (String entity : entities) {
 				SearchHit hit = new SearchHit();
 				hit.setDocno(entity);
+				hit.setDocID(index.getDocId(entity));
 				hit.setScore(documentEntities.get(document).get(entity));
 				hit.setQueryName(document);
 				hits.add(hit);
@@ -77,7 +74,7 @@ public class DocumentEntityReader extends AbstractReader {
 			
 			return hits;
 		}
-		logger.warn("No document "+document+" recorded");
+		System.err.println("No document "+document+" recorded");
 		return new SearchHits();
 	}
 	

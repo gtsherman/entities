@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
@@ -20,18 +21,23 @@ import edu.gslis.utils.Stopper;
 
 public class DoubleEntityRMRunner implements QueryRunner {
 	
-	IndexWrapperIndriImpl index;
-	Stopper stopper;
-	DocumentEntityReader de;
-	Map<IndexWrapperIndriImpl, String> expansionIndexes;
+	private static final int mu = 2500;
+	
+	private IndexWrapperIndriImpl index;
+	private Stopper stopper;
+	private Map<IndexWrapperIndriImpl, DocumentEntityReader> de;
+	private Map<String, CollectionStats> cs;
+	private Map<IndexWrapperIndriImpl, String> expansionIndexes;
 	
 	public DoubleEntityRMRunner(IndexWrapperIndriImpl index,
 			Stopper stopper,
-			DocumentEntityReader de,
+			Map<IndexWrapperIndriImpl, DocumentEntityReader> de,
+			Map<String, CollectionStats> cs,
 			Map<IndexWrapperIndriImpl, String> expansionIndexes) {
 		this.index = index;
 		this.stopper = stopper;
 		this.de = de;
+		this.cs = cs;
 		this.expansionIndexes = expansionIndexes;
 	}
 
@@ -50,13 +56,18 @@ public class DoubleEntityRMRunner implements QueryRunner {
 				
 				currentParams.put(DoubleEntityRunner.WIKI_WEIGHT, wikiWeight);
 				currentParams.put(DoubleEntityRunner.SELF_WEIGHT, selfWeight);
-
-				SearchHitsBatch batchResults = run(queries, 100, currentParams);
 				
-				double metricVal = evaluator.evaluate(batchResults, qrels);
-				if (metricVal > maxMetric) {
-					maxMetric = metricVal;
-					bestParams.putAll(currentParams);
+				for (int lambda = 0; lambda <= 10; lambda += 1) {
+					double lam = lambda / 10.0;
+					currentParams.put(RMRunner.ORIG_QUERY_WEIGHT, lam);
+
+					SearchHitsBatch batchResults = run(queries, 100, currentParams);
+
+					double metricVal = evaluator.evaluate(batchResults, qrels);
+					if (metricVal > maxMetric) {
+						maxMetric = metricVal;
+						bestParams.putAll(currentParams);
+					}
 				}
 			}
 		}
@@ -76,20 +87,25 @@ public class DoubleEntityRMRunner implements QueryRunner {
 			try {
 				fbDocs = params.get(RMRunner.FEEDBACK_DOCUMENTS).intValue();
 			} catch (NullPointerException e) {
-				System.err.println("No fbdocs param found. Defaulting to 20.");
+				
 			}
 			int fbTerms = 20;
 			try {
 				params.get(RMRunner.FEEDBACK_TERMS).intValue();
 			} catch (NullPointerException e) {
-				System.err.println("No fbterms param found. Defaulting to 20.");
+				
 			}
 			
-			SearchHits initialHits = index.runQuery(query, numResults);
+			SearchHits initialHits = index.runQuery(query, 100);
 			
 			Iterator<SearchHit> hitIt = initialHits.iterator();
 			while (hitIt.hasNext()) {
 				SearchHit hit = hitIt.next();
+				hit.setFeatureVector(index.getDocVector(hit.getDocID(), null));
+
+				GQuery hitQuery = new GQuery();
+				hitQuery.setTitle(hit.getDocno());
+				hitQuery.setText(hit.getDocno());
 
 				Map<String, FeatureVector> expansionVecs = new HashMap<String, FeatureVector>();
 				for (IndexWrapperIndriImpl expansionIndex : expansionIndexes.keySet()) {
@@ -98,8 +114,9 @@ public class DoubleEntityRMRunner implements QueryRunner {
 					rm.setDocCount(fbDocs);
 					rm.setTermCount(fbTerms);
 					rm.setIndex(expansionIndex);
-					rm.setRes(de.getEntitiesAsSearchHits(hit.getDocno()));
+					rm.setRes(de.get(expansionIndex).getEntitiesAsSearchHits(hit.getDocno(), expansionIndex));
 					rm.setStopper(stopper);
+					rm.setOriginalQuery(hitQuery);
 					rm.build();
 					FeatureVector rmVec = rm.asGquery().getFeatureVector();
 					rmVec.normalize();
@@ -119,18 +136,19 @@ public class DoubleEntityRMRunner implements QueryRunner {
 				Iterator<String> queryIterator = query.getFeatureVector().iterator();
 				while(queryIterator.hasNext()) {
 					String feature = queryIterator.next();
+					
+					double collectionScoreSelf = (1.0 + cs.get(DoubleEntityRunner.SELF_WEIGHT).termCount(feature)) / cs.get(DoubleEntityRunner.SELF_WEIGHT).getTokCount();
+					double collectionScoreWiki = (1.0 + cs.get(DoubleEntityRunner.SELF_WEIGHT).termCount(feature)) / cs.get(DoubleEntityRunner.SELF_WEIGHT).getTokCount();
+					double docProb = (doc.getFeatureWeight(feature) + mu*collectionScoreSelf) / (doc.getLength() + mu);
+					double entityWikiProb = (wiki.getFeatureWeight(feature) + mu*collectionScoreWiki) / (wiki.getLength() + mu);
+					double entitySelfProb = (self.getFeatureWeight(feature) + mu*collectionScoreSelf) / (self.getLength() + mu);
 
-					double docProb = doc.getFeatureWeight(feature);
-					double entityWikiProb = wiki.getFeatureWeight(feature);
-					double entitySelfProb = self.getFeatureWeight(feature);
-
-					double pr = params.get(DoubleEntityRunner.DOCUMENT_WEIGHT)*docProb +
-							params.get(DoubleEntityRunner.WIKI_WEIGHT)*entityWikiProb +
-							params.get(DoubleEntityRunner.SELF_WEIGHT)*entitySelfProb;
+					double pr = docWeight*docProb +
+							wikiWeight*entityWikiProb +
+							selfWeight*entitySelfProb;
 					double queryWeight = query.getFeatureVector().getFeatureWeight(feature);
 					logLikelihood += queryWeight * Math.log(pr);
 				}
-			
 				hit.setScore(logLikelihood);
 				
 				FeatureVector wikiSelf = FeatureVector.interpolate(wiki, self, wikiWeight/(wikiWeight+selfWeight));
@@ -147,6 +165,7 @@ public class DoubleEntityRMRunner implements QueryRunner {
 			rm.setIndex(index);
 			rm.setRes(initialHits);
 			rm.setStopper(stopper);
+			rm.setOriginalQuery(query);
 			rm.build();
 			FeatureVector rmVec = rm.asGquery().getFeatureVector();
 			rmVec.normalize();	
