@@ -1,5 +1,7 @@
 package edu.gslis.evaluation.running.runners;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -9,6 +11,7 @@ import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
+import edu.gslis.main.PrecomputeExpansionRMs;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
 import edu.gslis.queries.expansion.FeedbackRelevanceModel;
@@ -18,27 +21,36 @@ import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
+import edu.gslis.utils.readers.RelevanceModelReader;
 
 public class DoubleEntityRMRunner implements QueryRunner {
 	
 	private static final int mu = 2500;
 	
 	private IndexWrapperIndriImpl index;
+	private IndexWrapperIndriImpl wikiIndex;
 	private Stopper stopper;
-	private Map<IndexWrapperIndriImpl, DocumentEntityReader> de;
+	private DocumentEntityReader deSelf;
+	private DocumentEntityReader deWiki;
 	private Map<String, CollectionStats> cs;
-	private Map<IndexWrapperIndriImpl, String> expansionIndexes;
+	private String expansionRMsDir;
+	
+	private Map<GQuery, SearchHits> initialHitsPerQuery;
 	
 	public DoubleEntityRMRunner(IndexWrapperIndriImpl index,
+			IndexWrapperIndriImpl wikiIndex,
 			Stopper stopper,
-			Map<IndexWrapperIndriImpl, DocumentEntityReader> de,
+			DocumentEntityReader deSelf,
+			DocumentEntityReader deWiki,
 			Map<String, CollectionStats> cs,
-			Map<IndexWrapperIndriImpl, String> expansionIndexes) {
+			String expansionRMsDir) {
 		this.index = index;
+		this.wikiIndex = wikiIndex;
 		this.stopper = stopper;
-		this.de = de;
+		this.deSelf = deSelf;
+		this.deWiki = deWiki;
 		this.cs = cs;
-		this.expansionIndexes = expansionIndexes;
+		this.expansionRMsDir = expansionRMsDir;
 	}
 
 	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator, Qrels qrels) {
@@ -61,6 +73,7 @@ public class DoubleEntityRMRunner implements QueryRunner {
 					double lam = lambda / 10.0;
 					currentParams.put(RMRunner.ORIG_QUERY_WEIGHT, lam);
 
+					System.err.println("\t\tParameters: "+origWeight+" (doc), "+wikiWeight+" (wiki), "+selfWeight+" (self), "+lam+" (mixing)");
 					SearchHitsBatch batchResults = run(queries, 100, currentParams);
 
 					double metricVal = evaluator.evaluate(batchResults, qrels);
@@ -83,6 +96,9 @@ public class DoubleEntityRMRunner implements QueryRunner {
 			GQuery query = qIt.next();
 			query.applyStopper(stopper);
 			
+			if (!query.getTitle().equals("462"))
+				continue;
+			
 			int fbDocs = 20;
 			try {
 				fbDocs = params.get(RMRunner.FEEDBACK_DOCUMENTS).intValue();
@@ -96,36 +112,28 @@ public class DoubleEntityRMRunner implements QueryRunner {
 				
 			}
 			
-			SearchHits initialHits = index.runQuery(query, 100);
+			SearchHits initialHits = getInitialHits(query, numResults);
 			
 			Iterator<SearchHit> hitIt = initialHits.iterator();
 			while (hitIt.hasNext()) {
 				SearchHit hit = hitIt.next();
 				hit.setFeatureVector(index.getDocVector(hit.getDocID(), null));
-
-				GQuery hitQuery = new GQuery();
-				hitQuery.setTitle(hit.getDocno());
-				hitQuery.setText(hit.getDocno());
-
-				Map<String, FeatureVector> expansionVecs = new HashMap<String, FeatureVector>();
-				for (IndexWrapperIndriImpl expansionIndex : expansionIndexes.keySet()) {
-					// Build an RM on the expansion documents
-					FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
-					rm.setDocCount(fbDocs);
-					rm.setTermCount(fbTerms);
-					rm.setIndex(expansionIndex);
-					rm.setRes(de.get(expansionIndex).getEntitiesAsSearchHits(hit.getDocno(), expansionIndex));
-					rm.setStopper(stopper);
-					rm.setOriginalQuery(hitQuery);
-					rm.build();
-					FeatureVector rmVec = rm.asGquery().getFeatureVector();
-					rmVec.normalize();
-					
-					expansionVecs.put(expansionIndexes.get(expansionIndex), rmVec);
-				}
 				
-				FeatureVector wiki = expansionVecs.get(DoubleEntityRunner.WIKI_WEIGHT);
-				FeatureVector self = expansionVecs.get(DoubleEntityRunner.SELF_WEIGHT);
+				File wikiFile = new File(expansionRMsDir+"/"+hit.getDocno()+"/wiki");
+				if (!wikiFile.exists()) {
+					System.err.println("Document "+hit.getDocno()+" not expanded. Expanding...");
+					try {
+						PrecomputeExpansionRMs.compute(query, index, wikiIndex, stopper, deSelf, deWiki, expansionRMsDir);
+					} catch (IOException e) {
+						System.err.println("Error creating file "+wikiFile.getAbsolutePath());
+					}
+				}
+				RelevanceModelReader wikiReader = new RelevanceModelReader(wikiFile);
+				FeatureVector wiki = wikiReader.getFeatureVector();
+				
+				File selfFile = new File(expansionRMsDir+"/"+hit.getDocno()+"/self");
+				RelevanceModelReader selfReader = new RelevanceModelReader(selfFile);
+				FeatureVector self = selfReader.getFeatureVector();
 				FeatureVector doc = hit.getFeatureVector();
 				
 				double wikiWeight = params.get(DoubleEntityRunner.WIKI_WEIGHT);
@@ -171,15 +179,34 @@ public class DoubleEntityRMRunner implements QueryRunner {
 			rmVec.normalize();	
 			
 			FeatureVector rm3 = FeatureVector.interpolate(query.getFeatureVector(), rmVec, params.get(RMRunner.ORIG_QUERY_WEIGHT));
+			rm3.normalize();
 			
 			GQuery newQuery = new GQuery();
 			newQuery.setTitle(query.getTitle());
 			newQuery.setFeatureVector(rm3);
 			
-			SearchHits results = index.runQuery(newQuery, numResults);
-			batchResults.setSearchHits(query.getTitle(), results);	
+			try {
+				SearchHits results = index.runQuery(newQuery, numResults);
+				batchResults.setSearchHits(query.getTitle(), results);	
+			} catch (Exception e) {
+				System.err.println("Problem with RM:");
+				System.err.println(rm3.toString(5));
+				System.err.println(e.getStackTrace());
+			}
 		}
 		return batchResults;
+	}
+	
+	private SearchHits getInitialHits(GQuery query, int count) {
+		if (initialHitsPerQuery == null) {
+			initialHitsPerQuery = new HashMap<GQuery, SearchHits>();
+		}
+		if (initialHitsPerQuery.containsKey(query)) {
+			return initialHitsPerQuery.get(query);
+		}
+		SearchHits hits = index.runQuery(query, count);
+		initialHitsPerQuery.put(query, hits);
+		return hits;
 	}
 
 }

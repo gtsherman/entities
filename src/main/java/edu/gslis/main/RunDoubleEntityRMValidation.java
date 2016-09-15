@@ -34,9 +34,9 @@ public class RunDoubleEntityRMValidation {
 		config.read(args[0]);
 		
 		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
+		IndexWrapperIndriImpl wikiIndex = new IndexWrapperIndriImpl(config.get("wiki-index"));
 		CollectionStats csSelf = new IndexBackedCollectionStats();
 		csSelf.setStatSource(config.get("index"));
-		IndexWrapperIndriImpl wikiIndex = new IndexWrapperIndriImpl(config.get("wiki-index"));
 		CollectionStats csWiki = new IndexBackedCollectionStats();
 		csSelf.setStatSource(config.get("wiki-index"));
 		Stopper stopper = new Stopper(config.get("stoplist"));
@@ -45,23 +45,15 @@ public class RunDoubleEntityRMValidation {
 		Qrels qrels = new Qrels(config.get("qrels"), false, 1);
 		String forQueryProbs = config.get("for-query-probs");
 		String targetMetric = config.get("target-metric");
-		
-		int numEntities = 10;
-		if (config.get("num-entities") != null) {
-			numEntities = Integer.parseInt(config.get("num-entities"));
-		}
-		if (args.length > 2) {
-			numEntities = Integer.parseInt(args[2]);
-		}
+		String expansionRMsDir = config.get("expansion-rms-dir");
 		
 		DocumentEntityReader deSelf = new DocumentEntityReader();
-		deSelf.setLimit(numEntities);
+		deSelf.setLimit(10);
 		deSelf.readFileAbsolute(config.get("document-entities-file-self"));
 
 		DocumentEntityReader deWiki = new DocumentEntityReader();
-		deWiki.setLimit(numEntities);
+		deWiki.setLimit(10);
 		deWiki.readFileAbsolute(config.get("document-entities-file-wiki"));
-
 
 		Evaluator evaluator = new MAPEvaluator();
 		if (targetMetric.equalsIgnoreCase("ndcg")) {
@@ -73,19 +65,11 @@ public class RunDoubleEntityRMValidation {
 		
 		long seed = Long.parseLong(args[1]);
 
-		Map<IndexWrapperIndriImpl, String> expansionIndexes = new HashMap<IndexWrapperIndriImpl, String>();
-		expansionIndexes.put(index, DoubleEntityRunner.SELF_WEIGHT);
-		expansionIndexes.put(wikiIndex, DoubleEntityRunner.WIKI_WEIGHT);
-
-		Map<IndexWrapperIndriImpl, DocumentEntityReader> de = new HashMap<IndexWrapperIndriImpl, DocumentEntityReader>();
-		de.put(index, deSelf);
-		de.put(wikiIndex, deWiki);
-		
 		Map<String, CollectionStats> cs = new HashMap<String, CollectionStats>();
 		cs.put(DoubleEntityRunner.WIKI_WEIGHT, csWiki);
 		cs.put(DoubleEntityRunner.SELF_WEIGHT, csSelf);
 		
-		DoubleEntityRMRunner runner = new DoubleEntityRMRunner(index, stopper, de, cs, expansionIndexes);
+		DoubleEntityRMRunner runner = new DoubleEntityRMRunner(index, wikiIndex, stopper, deSelf, deWiki, cs, expansionRMsDir);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator, qrels);
