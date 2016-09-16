@@ -71,54 +71,66 @@ public class PrecomputeExpansionRMs {
 			DocumentEntityReader deSelf,
 			DocumentEntityReader deWiki,
 			String outDir) throws IOException {
+
 		SearchHits initialHits = index.runQuery(query, 100);
 		
 		Iterator<SearchHit> hitIt = initialHits.iterator();
 		while (hitIt.hasNext()) {
 			SearchHit hit = hitIt.next();
 			
-			File hitDir = new File(outDir+"/"+hit.getDocno());
-			if (!hitDir.exists()) {
-				hitDir.mkdirs();
-			} else {
-				System.err.println("Seen "+hit.getDocno()+". Skipping.");
-				continue; // we've already expanded this doc
-			}
-
-			GQuery hitQuery = new GQuery();
-			hitQuery.setTitle(hit.getDocno());
-			hitQuery.setText(hit.getDocno());
-
-			// Build an RM on the expansion documents
-			FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
-			rm.setDocCount(20);
-			rm.setTermCount(20);
-			rm.setIndex(index);
-			rm.setRes(deSelf.getEntitiesAsSearchHits(hit.getDocno(), index));
-			rm.setStopper(stopper);
-			rm.setOriginalQuery(hitQuery);
-			rm.build();
-			FeatureVector rmVec = rm.asGquery().getFeatureVector();
-			rmVec.normalize();
-			
-			File selfOut = new File(outDir+"/"+hit.getDocno()+"/"+"self");
-			FileUtils.write(selfOut, rmVec.toString());
-			
-			// Build an RM on the expansion documents
-			rm = new FeedbackRelevanceModel();
-			rm.setDocCount(20);
-			rm.setTermCount(20);
-			rm.setIndex(wikiIndex);
-			rm.setRes(deWiki.getEntitiesAsSearchHits(hit.getDocno(), wikiIndex));
-			rm.setStopper(stopper);
-			rm.setOriginalQuery(hitQuery);
-			rm.build();
-			rmVec = rm.asGquery().getFeatureVector();
-			rmVec.normalize();
-			
-			File wikiOut = new File(outDir+"/"+hit.getDocno()+"/"+"wiki");
-			FileUtils.write(wikiOut, rmVec.toString());
+			compute(hit, index, wikiIndex, stopper, deSelf, deWiki, outDir);
 		}
+	}
+	
+	public static void compute(SearchHit hit,
+			IndexWrapperIndriImpl index,
+			IndexWrapperIndriImpl wikiIndex,
+			Stopper stopper,
+			DocumentEntityReader deSelf,
+			DocumentEntityReader deWiki,
+			String outDir) throws IOException {
+
+		File hitDir = new File(outDir+"/"+hit.getDocno());
+		if (!hitDir.exists()) {
+			hitDir.mkdirs();
+		} else {
+			System.err.println("Seen "+hit.getDocno()+". Skipping.");
+			return; // we've already expanded this doc
+		}
+		
+		GQuery hitQuery = new GQuery();
+		hitQuery.setTitle(hit.getDocno());
+		hitQuery.setText(hit.getDocno());
+
+		// Build an RM on the expansion documents
+		FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
+		rm.setDocCount(20);
+		rm.setTermCount(20);
+		rm.setIndex(index);
+		rm.setRes(deSelf.getEntitiesAsSearchHits(hit.getDocno(), index));
+		rm.setStopper(stopper);
+		rm.setOriginalQuery(hitQuery);
+		rm.build();
+		FeatureVector rmVec = rm.asGquery().getFeatureVector();
+		rmVec.normalize();
+		
+		File selfOut = new File(outDir+"/"+hit.getDocno()+"/"+"self");
+		FileUtils.write(selfOut, rmVec.toString());
+		
+		// Build an RM on the expansion documents
+		rm = new FeedbackRelevanceModel();
+		rm.setDocCount(20);
+		rm.setTermCount(20);
+		rm.setIndex(wikiIndex);
+		rm.setRes(deWiki.getEntitiesAsSearchHits(hit.getDocno(), wikiIndex));
+		rm.setStopper(stopper);
+		rm.setOriginalQuery(hitQuery);
+		rm.build();
+		rmVec = rm.asGquery().getFeatureVector();
+		rmVec.normalize();
+		
+		File wikiOut = new File(outDir+"/"+hit.getDocno()+"/"+"wiki");
+		FileUtils.write(wikiOut, rmVec.toString());
 	}
 
 }

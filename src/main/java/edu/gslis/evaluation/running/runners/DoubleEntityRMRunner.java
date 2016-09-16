@@ -85,6 +85,10 @@ public class DoubleEntityRMRunner implements QueryRunner {
 			}
 		}
 		
+		System.err.println("Best parameters:");
+		for (String param : bestParams.keySet()) {
+			System.err.println(param+": "+bestParams.get(param));
+		}
 		return bestParams;
 	}
 
@@ -95,9 +99,6 @@ public class DoubleEntityRMRunner implements QueryRunner {
 		while (qIt.hasNext()) {
 			GQuery query = qIt.next();
 			query.applyStopper(stopper);
-			
-			if (!query.getTitle().equals("462"))
-				continue;
 			
 			int fbDocs = 20;
 			try {
@@ -123,7 +124,7 @@ public class DoubleEntityRMRunner implements QueryRunner {
 				if (!wikiFile.exists()) {
 					System.err.println("Document "+hit.getDocno()+" not expanded. Expanding...");
 					try {
-						PrecomputeExpansionRMs.compute(query, index, wikiIndex, stopper, deSelf, deWiki, expansionRMsDir);
+						PrecomputeExpansionRMs.compute(hit, index, wikiIndex, stopper, deSelf, deWiki, expansionRMsDir);
 					} catch (IOException e) {
 						System.err.println("Error creating file "+wikiFile.getAbsolutePath());
 					}
