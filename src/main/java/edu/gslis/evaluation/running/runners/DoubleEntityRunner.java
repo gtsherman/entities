@@ -59,7 +59,11 @@ public class DoubleEntityRunner implements QueryRunner {
 				}
 			}
 		}
-		
+	
+		System.err.println("Best parameters:");
+		for (String param : bestParams.keySet()) {
+			System.err.println(param+": "+bestParams.get(param));
+		}
 		return bestParams;
 	}
 

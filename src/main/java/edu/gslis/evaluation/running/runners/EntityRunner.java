@@ -25,15 +25,24 @@ public class EntityRunner implements QueryRunner {
 	
 	public static final String DOCUMENT_WEIGHT = "document";
 	public static final String WIKI_WEIGHT = "wiki";
+	public static final String WIKI_MODEL = "Wiki";
+	public static final String SELF_MODEL = "Self";
 
 	private IndexWrapperIndriImpl index;
 	private QueryProbabilityReader qpreader;
 	private Stopper stopper;
+
+	private int numEntities = 10;
+	private String model = WIKI_MODEL;
+	
+	private Map<GQuery, SearchHits> initialHitsPerQuery;
 	
 	public EntityRunner(IndexWrapperIndriImpl index, QueryProbabilityReader qpreader, Stopper stopper) {
 		this.index = index;
 		this.qpreader = qpreader;
 		this.stopper = stopper;
+		
+		this.initialHitsPerQuery = new HashMap<GQuery, SearchHits>();
 	}
 	
 	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator, Qrels qrels) {
@@ -60,7 +69,19 @@ public class EntityRunner implements QueryRunner {
 			}
 		}
 		
+		System.err.println("Best parameters:");
+		for (String param : bestParams.keySet()) {
+			System.err.println(param+": "+bestParams.get(param));
+		}
 		return bestParams;
+	}
+
+	public void setNumEntities(int numEntities) {
+		this.numEntities = numEntities;
+	}
+	
+	public void setModel(String model) {
+		this.model = model;
 	}
 
 	public SearchHitsBatch run(GQueries queries, int numResults, Map<String, Double> params) {
@@ -70,14 +91,15 @@ public class EntityRunner implements QueryRunner {
 			GQuery query = queryIt.next();
 			query.applyStopper(stopper);
 			
-			SearchHits initialHits = index.runQuery(query, numResults);
+			SearchHits initialHits = getInitialHits(query, numResults);
+
 			Iterator<SearchHit> hitIt = initialHits.iterator();
 			while (hitIt.hasNext()) {
 				SearchHit doc = hitIt.next();
 
 				qpreader.readFileRelative("docProbs/"+query.getTitle()+"/"+doc.getDocno());
 				Map<String, Double> termProbsDoc = qpreader.getTermProbs();
-				qpreader.readFileRelative("entityProbsWiki/"+query.getTitle()+"/"+doc.getDocno());
+				qpreader.readFileRelative("entityProbs"+model+"."+numEntities+"/"+query.getTitle()+"/"+doc.getDocno());
 				Map<String, Double> termProbsWiki = qpreader.getTermProbs();
 
 				double logLikelihood = 0.0;
@@ -104,6 +126,15 @@ public class EntityRunner implements QueryRunner {
 			batchResults.setSearchHits(query.getTitle(), initialHits);
 		}
 		return batchResults;
+	}
+	
+	private SearchHits getInitialHits(GQuery query, int numResults) {
+		if (initialHitsPerQuery.containsKey(query)) {
+			return initialHitsPerQuery.get(query);
+		}
+		SearchHits hits = index.runQuery(query, numResults);
+		initialHitsPerQuery.put(query, hits);
+		return hits;
 	}
 
 }
