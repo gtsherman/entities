@@ -5,9 +5,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import edu.gslis.docscoring.QueryDocScorer;
 import edu.gslis.entities.docscoring.support.EntityProbability;
 import edu.gslis.queries.GQuery;
@@ -15,8 +12,6 @@ import edu.gslis.readers.QueryProbabilityReader;
 import edu.gslis.searchhits.SearchHit;
 
 public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
-	
-	final static Logger logger = LoggerFactory.getLogger(ScorerDirichletEntityInterpolated.class);
 	
 	public String PARAMETER_NAME = "mu";
 	public double EPSILON = 1.0;
@@ -46,10 +41,10 @@ public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
 	public double score(SearchHit doc) {
 		Map<String, Double> termProbs;
 		if (qpreader == null) {
-			logger.debug("Computing fresh query probabilities");
+			//logger.debug("Computing fresh query probabilities");
 			termProbs = getTermProbs(doc, gQuery, catProb);
 		} else {
-			logger.debug("Reading precomputed query probabilities");
+			//logger.debug("Reading precomputed query probabilities");
 			termProbs = getTermProbs(doc, gQuery, qpreader);
 		}
 		
@@ -67,12 +62,12 @@ public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
 		Iterator<String> queryIterator = gQuery.getFeatureVector().iterator();
 		while(queryIterator.hasNext()) {
 			String feature = queryIterator.next();
-			logger.debug("Scoring term: "+feature);
+			//logger.debug("Scoring term: "+feature);
 			
 			double docFreq = doc.getFeatureVector().getFeatureWeight(feature);
 			double docLength = doc.getLength();
 			double categoryProb = termProbs.get(feature);
-			logger.debug("Probability for term "+feature+": "+categoryProb);
+			//logger.debug("Probability for term "+feature+": "+categoryProb);
 			double collectionProb = (EPSILON + collectionStats.termCount(feature)) / collectionStats.getTokCount();
 			double pr = (1-lambda)*((docFreq + 
 					paramTable.get(PARAMETER_NAME)*collectionProb) / (docLength + paramTable.get(PARAMETER_NAME))) +
@@ -80,7 +75,7 @@ public class ScorerDirichletEntityInterpolated extends QueryDocScorer {
 			double queryWeight = gQuery.getFeatureVector().getFeatureWeight(feature);
 			logLikelihood += queryWeight * Math.log(pr);
 		}
-		logger.debug(doc.getDocno()+", "+lambda+": "+logLikelihood);
+		//logger.debug(doc.getDocno()+", "+lambda+": "+logLikelihood);
 		return logLikelihood;
 	}
 	

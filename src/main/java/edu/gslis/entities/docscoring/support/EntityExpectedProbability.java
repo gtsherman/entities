@@ -6,9 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.readers.DocumentEntityReader;
@@ -18,8 +15,6 @@ import edu.gslis.utils.Stopper;
 
 public class EntityExpectedProbability implements EntityProbability {
 	
-	final static Logger logger = LoggerFactory.getLogger(EntityExpectedProbability.class);
-
 	private DocumentEntityReader de;
 	private IndexWrapperIndriImpl index;
 	private Stopper stopper;
@@ -38,8 +33,8 @@ public class EntityExpectedProbability implements EntityProbability {
 		docno = document.getDocno();
 		entities = de.getEntities(docno);
 		
-		logger.info("Document: "+document.getDocno());
-		logger.debug("There are "+entities.size()+" entities for this document");
+		//logger.info("Document: "+document.getDocno());
+		//logger.debug("There are "+entities.size()+" entities for this document");
 	}
 	
 	public void setCollectionStats(CollectionStats cs) {
@@ -52,7 +47,7 @@ public class EntityExpectedProbability implements EntityProbability {
 		Set<String> termSet = new HashSet<String>(terms);
 		Set<String> entitySet = new HashSet<String>(entities);
 
-		logger.debug("Using index.");
+		//logger.debug("Using index.");
 		
 		Map<String, FeatureVector> entityVecs = new HashMap<String, FeatureVector>();
 		Map<String, Double> normalizedConfidences = new HashMap<String, Double>();
@@ -86,15 +81,15 @@ public class EntityExpectedProbability implements EntityProbability {
 			for (String entity : entitySet) {
 				entityVector = entityVecs.get(entity);
 				
-				logger.debug("Entity: "+entity);
+				//logger.debug("Entity: "+entity);
 
-				logger.debug(term+": "+entityVector.getFeatureWeight(term));
-				logger.debug("Document length: "+entityVector.getLength());
+				//logger.debug(term+": "+entityVector.getFeatureWeight(term));
+				//logger.debug("Document length: "+entityVector.getLength());
 
 				double qlscore = (entityVector.getFeatureWeight(term) + mu*collectionScore) / (entityVector.getLength() + mu);
 				double confidence = normalizedConfidences.get(entity);
 				
-				logger.debug("Final score: "+qlscore*confidence);
+				//logger.debug("Final score: "+qlscore*confidence);
 				
 				termProbs.put(term, termProbs.get(term)+(qlscore*confidence));
 			}

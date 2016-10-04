@@ -6,9 +6,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.docscoring.ScorerDirichletEntityInterpolated;
@@ -16,6 +13,7 @@ import edu.gslis.entities.docscoring.support.EntityExpectedProbability;
 import edu.gslis.entities.docscoring.support.EntityProbability;
 import edu.gslis.entities.docscoring.support.EntityPseudoDocumentProbability;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
+import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.readers.DocumentEntityReader;
@@ -28,8 +26,6 @@ import edu.gslis.utils.config.SimpleConfiguration;
 
 public class PrecomputeEntityProbabilities {
 	
-	static final Logger logger = LoggerFactory.getLogger(PrecomputeEntityProbabilities.class);
-
 	public static void main(String[] args) {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
@@ -45,6 +41,9 @@ public class PrecomputeEntityProbabilities {
 		
 		GQueriesJsonImpl queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
+		
+		GQueriesJsonImpl rmQueries = new GQueriesJsonImpl();
+		rmQueries.read(config.get("rm-queries"));
 		
 		DocumentEntityReader de = new DocumentEntityReader();
 		int numEntities = Integer.parseInt(args[1]);
@@ -84,7 +83,7 @@ public class PrecomputeEntityProbabilities {
 			query.applyStopper(stopper);
 
 			i++;
-			logger.info("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
+			System.err.println("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
 			
 			File queryDir = new File(dataDir+"."+numEntities+"/"+query.getTitle());
 			if (!queryDir.exists())
@@ -98,27 +97,31 @@ public class PrecomputeEntityProbabilities {
 			}
 			
 			if (initialHits == null) {
-				logger.info("No documents for "+query.getTitle());
+				System.err.println("No documents for "+query.getTitle());
 				continue;
 			}
 
 			Iterator<SearchHit> hitIt = initialHits.iterator();
 			while (hitIt.hasNext()) {
 				SearchHit doc = hitIt.next();
-				doc.setDocID(index.getDocId(doc.getDocno()));
-				
-				Map<String, Double> termProbs = ScorerDirichletEntityInterpolated.getTermProbs(doc, query, cp);
-				try {
-					FileWriter out = new FileWriter(dataDir+"."+numEntities+"/"+query.getTitle()+"/"+doc.getDocno());
-					for (String term : termProbs.keySet()) {
-						out.write(term+"\t"+termProbs.get(term)+"\n");
-					}
-					out.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-					System.exit(-1);
-				}
+				compute(doc, index, rmQueries, query, cp, dataDir, numEntities);
 			}
+		}
+	}
+	
+	public static void compute(SearchHit doc, IndexWrapperIndriImpl index, GQueries queries, GQuery query, EntityProbability cp, String dataDir, int numEntities) {
+		doc.setDocID(index.getDocId(doc.getDocno()));
+		
+		Map<String, Double> termProbs = ScorerDirichletEntityInterpolated.getTermProbs(doc, queries.getNamedQuery(query.getTitle()), cp);
+		try {
+			FileWriter out = new FileWriter(dataDir+"."+numEntities+"/"+query.getTitle()+"/"+doc.getDocno());
+			for (String term : termProbs.keySet()) {
+				out.write(term+"\t"+termProbs.get(term)+"\n");
+			}
+			out.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
