@@ -70,6 +70,7 @@ public class RunRMRetrieval {
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
 			query.applyStopper(stopper);
+			query.getFeatureVector().normalize();
 			
 			System.err.println("Working on query "+query.getTitle()+". ("+i+++"/"+queries.numQueries()+")");
 

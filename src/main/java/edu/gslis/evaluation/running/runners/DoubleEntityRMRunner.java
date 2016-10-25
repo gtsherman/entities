@@ -120,7 +120,7 @@ public class DoubleEntityRMRunner implements QueryRunner {
 				SearchHit hit = hitIt.next();
 				hit.setFeatureVector(index.getDocVector(hit.getDocID(), null));
 				
-				File wikiFile = new File(expansionRMsDir+"/"+hit.getDocno()+"/wiki");
+				File wikiFile = new File(expansionRMsDir+File.separator+hit.getDocno()+File.separator+"wiki");
 				if (!wikiFile.exists()) {
 					System.err.println("Document "+hit.getDocno()+" not expanded. Expanding...");
 					try {
@@ -131,11 +131,14 @@ public class DoubleEntityRMRunner implements QueryRunner {
 				}
 				RelevanceModelReader wikiReader = new RelevanceModelReader(wikiFile);
 				FeatureVector wiki = wikiReader.getFeatureVector();
+				wiki.normalize();
 				
-				File selfFile = new File(expansionRMsDir+"/"+hit.getDocno()+"/self");
+				File selfFile = new File(expansionRMsDir+File.separator+hit.getDocno()+File.separator+"self");
 				RelevanceModelReader selfReader = new RelevanceModelReader(selfFile);
 				FeatureVector self = selfReader.getFeatureVector();
+				self.normalize();
 				FeatureVector doc = hit.getFeatureVector();
+				doc.normalize();
 				
 				double wikiWeight = params.get(DoubleEntityRunner.WIKI_WEIGHT);
 				double selfWeight = params.get(DoubleEntityRunner.SELF_WEIGHT);

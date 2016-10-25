@@ -90,7 +90,7 @@ public class PrecomputeExpansionRMs {
 			DocumentEntityReader deWiki,
 			String outDir) throws IOException {
 
-		File hitDir = new File(outDir+"/"+hit.getDocno());
+		File hitDir = new File(outDir+File.separator+hit.getDocno());
 		if (!hitDir.exists()) {
 			hitDir.mkdirs();
 		} else {
@@ -105,31 +105,31 @@ public class PrecomputeExpansionRMs {
 		// Build an RM on the expansion documents
 		FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
 		rm.setDocCount(20);
-		rm.setTermCount(20);
+		rm.setTermCount(Integer.MAX_VALUE);
 		rm.setIndex(index);
 		rm.setRes(deSelf.getEntitiesAsSearchHits(hit.getDocno(), index));
 		rm.setStopper(stopper);
 		rm.setOriginalQuery(hitQuery);
 		rm.build();
-		FeatureVector rmVec = rm.asGquery().getFeatureVector();
+		FeatureVector rmVec = rm.asFeatureVector();
 		rmVec.normalize();
 		
-		File selfOut = new File(outDir+"/"+hit.getDocno()+"/"+"self");
+		File selfOut = new File(outDir+File.separator+hit.getDocno()+File.separator+"self");
 		FileUtils.write(selfOut, rmVec.toString());
 		
 		// Build an RM on the expansion documents
 		rm = new FeedbackRelevanceModel();
 		rm.setDocCount(20);
-		rm.setTermCount(20);
+		rm.setTermCount(Integer.MAX_VALUE);
 		rm.setIndex(wikiIndex);
 		rm.setRes(deWiki.getEntitiesAsSearchHits(hit.getDocno(), wikiIndex));
 		rm.setStopper(stopper);
 		rm.setOriginalQuery(hitQuery);
 		rm.build();
-		rmVec = rm.asGquery().getFeatureVector();
+		rmVec = rm.asFeatureVector();
 		rmVec.normalize();
 		
-		File wikiOut = new File(outDir+"/"+hit.getDocno()+"/"+"wiki");
+		File wikiOut = new File(outDir+File.separator+hit.getDocno()+File.separator+"wiki");
 		FileUtils.write(wikiOut, rmVec.toString());
 	}
 

@@ -5,9 +5,6 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
@@ -21,8 +18,6 @@ import edu.gslis.utils.config.SimpleConfiguration;
 
 public class RunBaselineRelevanceModel {
 	
-	static final Logger logger = LoggerFactory.getLogger(RunBaselineRelevanceModel.class);
-
 	public static void main(String[] args) {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
@@ -51,6 +46,14 @@ public class RunBaselineRelevanceModel {
 			fbTerms = Integer.parseInt(config.get("fb-terms"));
 		}
 		
+ 		double origQueryWeight = 0.5;
+ 		if (config.get("original-query-weight") != null) {
+ 			origQueryWeight = Double.parseDouble(config.get("original-query-weight"));
+ 		}
+ 		if (args.length > 1) {
+ 			origQueryWeight = Double.parseDouble(args[1]);
+ 		}
+		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
 		
@@ -58,9 +61,11 @@ public class RunBaselineRelevanceModel {
 		int i = 0;
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
+			query.applyStopper(stopper);
+			query.getFeatureVector().normalize();
 			
 			i++;
-			logger.info("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
+			System.err.println("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
 			
 			FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
 			rm.setIndex(index);
@@ -73,13 +78,12 @@ public class RunBaselineRelevanceModel {
 			FeatureVector rmVec = rm.asGquery().getFeatureVector();
 			rmVec.normalize();
 
-			//FeatureVector rm3 = FeatureVector.interpolate(query.getFeatureVector(), rmVec, origQueryWeight);
+			rmVec = FeatureVector.interpolate(query.getFeatureVector(), rmVec, origQueryWeight);
 			GQuery rmQuery = new GQuery();
 			rmQuery.setFeatureVector(rmVec);
 			rmQuery.setTitle(query.getTitle());
 			
 			SearchHits hits = index.runQuery(rmQuery, numDocs);
-			hits.rank();
 			output.write(hits, query.getTitle());
 		}
 		output.close();
