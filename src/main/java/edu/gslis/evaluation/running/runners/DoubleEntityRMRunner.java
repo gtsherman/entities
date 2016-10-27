@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import edu.gslis.docscoring.support.CollectionStats;
+import edu.gslis.docscoring.support.PrefetchedCollectionStats;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
@@ -25,14 +25,13 @@ import edu.gslis.utils.readers.RelevanceModelReader;
 
 public class DoubleEntityRMRunner implements QueryRunner {
 	
-	private static final int mu = 2500;
-	
 	private IndexWrapperIndriImpl index;
 	private IndexWrapperIndriImpl wikiIndex;
 	private Stopper stopper;
 	private DocumentEntityReader deSelf;
 	private DocumentEntityReader deWiki;
-	private Map<String, CollectionStats> cs;
+	private PrefetchedCollectionStats csSelf;
+	private PrefetchedCollectionStats csWiki;
 	private String expansionRMsDir;
 	
 	private Map<GQuery, SearchHits> initialHitsPerQuery;
@@ -42,14 +41,16 @@ public class DoubleEntityRMRunner implements QueryRunner {
 			Stopper stopper,
 			DocumentEntityReader deSelf,
 			DocumentEntityReader deWiki,
-			Map<String, CollectionStats> cs,
+			PrefetchedCollectionStats csSelf,
+			PrefetchedCollectionStats csWiki,
 			String expansionRMsDir) {
 		this.index = index;
 		this.wikiIndex = wikiIndex;
 		this.stopper = stopper;
 		this.deSelf = deSelf;
 		this.deWiki = deWiki;
-		this.cs = cs;
+		this.csSelf = csSelf;
+		this.csWiki = csWiki;
 		this.expansionRMsDir = expansionRMsDir;
 	}
 
@@ -99,6 +100,7 @@ public class DoubleEntityRMRunner implements QueryRunner {
 		while (qIt.hasNext()) {
 			GQuery query = qIt.next();
 			query.applyStopper(stopper);
+			query.getFeatureVector().normalize();
 			
 			int fbDocs = 20;
 			try {
@@ -121,6 +123,7 @@ public class DoubleEntityRMRunner implements QueryRunner {
 				hit.setFeatureVector(index.getDocVector(hit.getDocID(), null));
 				
 				File wikiFile = new File(expansionRMsDir+File.separator+hit.getDocno()+File.separator+"wiki");
+				// if we didn't precompute this document for some reason, do it now
 				if (!wikiFile.exists()) {
 					System.err.println("Document "+hit.getDocno()+" not expanded. Expanding...");
 					try {
@@ -129,14 +132,15 @@ public class DoubleEntityRMRunner implements QueryRunner {
 						System.err.println("Error creating file "+wikiFile.getAbsolutePath());
 					}
 				}
-				RelevanceModelReader wikiReader = new RelevanceModelReader(wikiFile);
+				RelevanceModelReader wikiReader = new RelevanceModelReader(wikiFile, 50); // hope 50 is enough
 				FeatureVector wiki = wikiReader.getFeatureVector();
 				wiki.normalize();
 				
 				File selfFile = new File(expansionRMsDir+File.separator+hit.getDocno()+File.separator+"self");
-				RelevanceModelReader selfReader = new RelevanceModelReader(selfFile);
+				RelevanceModelReader selfReader = new RelevanceModelReader(selfFile, 50); // ditto
 				FeatureVector self = selfReader.getFeatureVector();
 				self.normalize();
+
 				FeatureVector doc = hit.getFeatureVector();
 				doc.normalize();
 				
@@ -144,13 +148,15 @@ public class DoubleEntityRMRunner implements QueryRunner {
 				double selfWeight = params.get(DoubleEntityRunner.SELF_WEIGHT);
 				double docWeight = params.get(DoubleEntityRunner.DOCUMENT_WEIGHT);
 				
+				double mu = 2500;
+				
 				double logLikelihood = 0.0;
 				Iterator<String> queryIterator = query.getFeatureVector().iterator();
 				while(queryIterator.hasNext()) {
 					String feature = queryIterator.next();
 					
-					double collectionScoreSelf = (1.0 + cs.get(DoubleEntityRunner.SELF_WEIGHT).termCount(feature)) / cs.get(DoubleEntityRunner.SELF_WEIGHT).getTokCount();
-					double collectionScoreWiki = (1.0 + cs.get(DoubleEntityRunner.SELF_WEIGHT).termCount(feature)) / cs.get(DoubleEntityRunner.SELF_WEIGHT).getTokCount();
+					double collectionScoreSelf = csSelf.collectionScore(feature);
+					double collectionScoreWiki = csWiki.collectionScore(feature);
 					double docProb = (doc.getFeatureWeight(feature) + mu*collectionScoreSelf) / (doc.getLength() + mu);
 					double entityWikiProb = (wiki.getFeatureWeight(feature) + mu*collectionScoreWiki) / (wiki.getLength() + mu);
 					double entitySelfProb = (self.getFeatureWeight(feature) + mu*collectionScoreSelf) / (self.getLength() + mu);
@@ -165,6 +171,7 @@ public class DoubleEntityRMRunner implements QueryRunner {
 				
 				FeatureVector wikiSelf = FeatureVector.interpolate(wiki, self, wikiWeight/(wikiWeight+selfWeight));
 				FeatureVector combined = FeatureVector.interpolate(doc, wikiSelf, docWeight);
+
 				hit.setFeatureVector(combined);
 			}
 			

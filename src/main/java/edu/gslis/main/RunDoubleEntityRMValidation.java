@@ -3,23 +3,22 @@ package edu.gslis.main;
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
+import java.util.Set;
 
-import edu.gslis.docscoring.support.CollectionStats;
-import edu.gslis.docscoring.support.IndexBackedCollectionStats;
+import edu.gslis.docscoring.support.PrefetchedCollectionStats;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
 import edu.gslis.evaluation.evaluators.NDCGEvaluator;
 import edu.gslis.evaluation.running.runners.DoubleEntityRMRunner;
-import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
 import edu.gslis.evaluation.validators.KFoldValidator;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
+import edu.gslis.queries.GQuery;
 import edu.gslis.readers.DocumentEntityReader;
 import edu.gslis.readers.QueryProbabilityReader;
 import edu.gslis.searchhits.SearchHitsBatch;
@@ -35,10 +34,6 @@ public class RunDoubleEntityRMValidation {
 		
 		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
 		IndexWrapperIndriImpl wikiIndex = new IndexWrapperIndriImpl(config.get("wiki-index"));
-		CollectionStats csSelf = new IndexBackedCollectionStats();
-		csSelf.setStatSource(config.get("index"));
-		CollectionStats csWiki = new IndexBackedCollectionStats();
-		csSelf.setStatSource(config.get("wiki-index"));
 		Stopper stopper = new Stopper(config.get("stoplist"));
 		GQueries queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
@@ -55,6 +50,18 @@ public class RunDoubleEntityRMValidation {
 		deWiki.setLimit(10);
 		deWiki.readFileAbsolute(config.get("document-entities-file-wiki"));
 
+		Set<String> terms = new HashSet<String>();
+		Iterator<GQuery> queryIt = queries.iterator();
+		while (queryIt.hasNext()) {
+			GQuery query = queryIt.next();
+			Iterator<String> featureIt = query.getFeatureVector().iterator();
+			while (featureIt.hasNext()) {
+				terms.add(featureIt.next());
+			}
+		}
+		PrefetchedCollectionStats csSelf = new PrefetchedCollectionStats(config.get("index"), terms);
+		PrefetchedCollectionStats csWiki = new PrefetchedCollectionStats(config.get("wiki-index"), terms);
+
 		Evaluator evaluator = new MAPEvaluator();
 		if (targetMetric.equalsIgnoreCase("ndcg")) {
 			evaluator = new NDCGEvaluator();
@@ -65,11 +72,7 @@ public class RunDoubleEntityRMValidation {
 		
 		long seed = Long.parseLong(args[1]);
 
-		Map<String, CollectionStats> cs = new HashMap<String, CollectionStats>();
-		cs.put(DoubleEntityRunner.WIKI_WEIGHT, csWiki);
-		cs.put(DoubleEntityRunner.SELF_WEIGHT, csSelf);
-		
-		DoubleEntityRMRunner runner = new DoubleEntityRMRunner(index, wikiIndex, stopper, deSelf, deWiki, cs, expansionRMsDir);
+		DoubleEntityRMRunner runner = new DoubleEntityRMRunner(index, wikiIndex, stopper, deSelf, deWiki, csSelf, csWiki, expansionRMsDir);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator, qrels);
