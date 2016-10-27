@@ -104,7 +104,7 @@ public class PrecomputeExpansionRMs {
 
 		// Build an RM on the expansion documents
 		FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
-		rm.setDocCount(20);
+		rm.setDocCount(10);
 		rm.setTermCount(Integer.MAX_VALUE);
 		rm.setIndex(index);
 		rm.setRes(deSelf.getEntitiesAsSearchHits(hit.getDocno(), index));
@@ -119,7 +119,7 @@ public class PrecomputeExpansionRMs {
 		
 		// Build an RM on the expansion documents
 		rm = new FeedbackRelevanceModel();
-		rm.setDocCount(20);
+		rm.setDocCount(10);
 		rm.setTermCount(Integer.MAX_VALUE);
 		rm.setIndex(wikiIndex);
 		rm.setRes(deWiki.getEntitiesAsSearchHits(hit.getDocno(), wikiIndex));
