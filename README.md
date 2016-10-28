@@ -1,7 +1,7 @@
-Entities
-========
+Document Expansion
+==================
 
-Code for entity linking and information retrieval.
+Originally for entity linking in IR, this code has gradually shifted to more generic document expansion.
 
 Configuration Files
 -------------------
