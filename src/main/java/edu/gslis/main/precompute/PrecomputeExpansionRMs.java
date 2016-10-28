@@ -1,4 +1,4 @@
-package edu.gslis.main;
+package edu.gslis.main.precompute;
 
 import java.io.File;
 import java.io.IOException;

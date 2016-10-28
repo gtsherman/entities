@@ -1,4 +1,4 @@
-package edu.gslis.main;
+package edu.gslis.main.precompute;
 
 import java.io.FileWriter;
 import java.io.IOException;

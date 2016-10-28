@@ -11,7 +11,7 @@ import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
-import edu.gslis.main.PrecomputeExpansionRMs;
+import edu.gslis.main.precompute.PrecomputeExpansionRMs;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
 import edu.gslis.queries.expansion.FeedbackRelevanceModel;
