@@ -168,9 +168,14 @@ public class DoubleEntityRMRunner implements QueryRunner {
 					logLikelihood += queryWeight * Math.log(pr);
 				}
 				hit.setScore(logLikelihood);
-				
-				FeatureVector wikiSelf = FeatureVector.interpolate(wiki, self, wikiWeight/(wikiWeight+selfWeight));
-				FeatureVector combined = FeatureVector.interpolate(doc, wikiSelf, docWeight);
+
+				FeatureVector combined;
+				if (wikiWeight == 0.0 && selfWeight == 0.0) {
+					combined = doc;
+				} else {
+					FeatureVector wikiSelf = FeatureVector.interpolate(wiki, self, wikiWeight/(wikiWeight+selfWeight));
+					combined = FeatureVector.interpolate(doc, wikiSelf, docWeight);
+				}
 
 				hit.setFeatureVector(combined);
 			}
