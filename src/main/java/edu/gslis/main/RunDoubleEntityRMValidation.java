@@ -62,9 +62,9 @@ public class RunDoubleEntityRMValidation {
 		PrefetchedCollectionStats csSelf = new PrefetchedCollectionStats(config.get("index"), terms);
 		PrefetchedCollectionStats csWiki = new PrefetchedCollectionStats(config.get("wiki-index"), terms);
 
-		Evaluator evaluator = new MAPEvaluator();
+		Evaluator evaluator = new MAPEvaluator(qrels);
 		if (targetMetric.equalsIgnoreCase("ndcg")) {
-			evaluator = new NDCGEvaluator();
+			evaluator = new NDCGEvaluator(qrels);
 		}
 		
 		QueryProbabilityReader qpreader = new QueryProbabilityReader();
@@ -75,7 +75,7 @@ public class RunDoubleEntityRMValidation {
 		DoubleEntityRMRunner runner = new DoubleEntityRMRunner(index, wikiIndex, stopper, deSelf, deWiki, csSelf, csWiki, expansionRMsDir);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
-		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator, qrels);
+		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);

@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
@@ -34,7 +33,7 @@ public class DoubleEntityRunner implements QueryRunner {
 		this.stopper = stopper;
 	}
 	
-	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator, Qrels qrels) {
+	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator) {
 		double maxMetric = 0.0;
 
 		Map<String, Double> bestParams = new HashMap<String, Double>();
@@ -52,7 +51,7 @@ public class DoubleEntityRunner implements QueryRunner {
 
 				SearchHitsBatch batchResults = run(queries, 100, currentParams);
 				
-				double metricVal = evaluator.evaluate(batchResults, qrels);
+				double metricVal = evaluator.evaluate(batchResults);
 				if (metricVal > maxMetric) {
 					maxMetric = metricVal;
 					bestParams.putAll(currentParams);

@@ -35,9 +35,9 @@ public class RunRMValidation {
 		String rmsDir = config.get("rms-dir");
 		String targetMetric = config.get("target-metric");
 		
-		Evaluator evaluator = new MAPEvaluator();
+		Evaluator evaluator = new MAPEvaluator(qrels);
 		if (targetMetric.equalsIgnoreCase("ndcg")) {
-			evaluator = new NDCGEvaluator();
+			evaluator = new NDCGEvaluator(qrels);
 		}
 		
 		long seed = Long.parseLong(args[1]);
@@ -45,7 +45,7 @@ public class RunRMValidation {
 		QueryRunner runner = new RMRunner(index, stopper, rmsDir);
 		KFoldValidator validator = new KFoldValidator(runner);
 
-		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator, qrels);
+		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);

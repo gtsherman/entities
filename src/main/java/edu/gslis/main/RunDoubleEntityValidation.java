@@ -45,9 +45,9 @@ public class RunDoubleEntityValidation {
 			numEntities = Integer.parseInt(args[2]);
 		}
 
-		Evaluator evaluator = new MAPEvaluator();
+		Evaluator evaluator = new MAPEvaluator(qrels);
 		if (targetMetric.equalsIgnoreCase("ndcg")) {
-			evaluator = new NDCGEvaluator();
+			evaluator = new NDCGEvaluator(qrels);
 		}
 		
 		QueryProbabilityReader qpreader = new QueryProbabilityReader();
@@ -62,7 +62,7 @@ public class RunDoubleEntityValidation {
 		runner.setNumEntities(numEntities);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
-		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator, qrels);
+		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);

@@ -7,7 +7,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
@@ -45,7 +44,7 @@ public class EntityRunner implements QueryRunner {
 		this.initialHitsPerQuery = new HashMap<GQuery, SearchHits>();
 	}
 	
-	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator, Qrels qrels) {
+	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator) {
 		double maxMetric = 0.0;
 
 		Map<String, Double> bestParams = new HashMap<String, Double>();
@@ -61,7 +60,7 @@ public class EntityRunner implements QueryRunner {
 
 				SearchHitsBatch batchResults = run(queries, 100, currentParams);
 				
-				double metricVal = evaluator.evaluate(batchResults, qrels);
+				double metricVal = evaluator.evaluate(batchResults);
 				if (metricVal > maxMetric) {
 					maxMetric = metricVal;
 					bestParams.putAll(currentParams);
