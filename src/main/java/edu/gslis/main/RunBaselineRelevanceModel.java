@@ -23,7 +23,7 @@ public class RunBaselineRelevanceModel {
 		config.read(args[0]);
 		
 		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
-		
+
 		Stopper stopper = null;
 		if (config.get("stoplist") != null)
 			stopper = new Stopper(config.get("stoplist"));
@@ -58,14 +58,10 @@ public class RunBaselineRelevanceModel {
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
 		
 		Iterator<GQuery> queryIt = queries.iterator();
-		int i = 0;
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
 			query.applyStopper(stopper);
 			query.getFeatureVector().normalize();
-			
-			i++;
-			System.err.println("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
 			
 			FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
 			rm.setIndex(index);
