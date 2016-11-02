@@ -7,9 +7,9 @@ import java.util.Iterator;
 import java.util.Map;
 
 import edu.gslis.docscoring.support.PrefetchedCollectionStats;
-import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
+import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.main.precompute.PrecomputeExpansionRMs;
 import edu.gslis.queries.GQueries;
@@ -34,7 +34,8 @@ public class DoubleEntityRMRunner implements QueryRunner {
 	private PrefetchedCollectionStats csWiki;
 	private String expansionRMsDir;
 	
-	private Map<GQuery, SearchHits> initialHitsPerQuery;
+	private ParameterizedResults initialHitsPerQuery;
+	private ParameterizedResults queryResults;
 	
 	public DoubleEntityRMRunner(IndexWrapperIndriImpl index,
 			IndexWrapperIndriImpl wikiIndex,
@@ -52,9 +53,12 @@ public class DoubleEntityRMRunner implements QueryRunner {
 		this.csSelf = csSelf;
 		this.csWiki = csWiki;
 		this.expansionRMsDir = expansionRMsDir;
+		
+		this.initialHitsPerQuery = new ParameterizedResults();
+		this.queryResults = new ParameterizedResults();
 	}
 
-	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator, Qrels qrels) {
+	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator) {
 		double maxMetric = 0.0;
 
 		Map<String, Double> bestParams = new HashMap<String, Double>();
@@ -77,7 +81,30 @@ public class DoubleEntityRMRunner implements QueryRunner {
 					System.err.println("\t\tParameters: "+origWeight+" (doc), "+wikiWeight+" (wiki), "+selfWeight+" (self), "+lam+" (mixing)");
 					SearchHitsBatch batchResults = run(queries, 100, currentParams);
 
-					double metricVal = evaluator.evaluate(batchResults, qrels);
+					//double metricVal = evaluator.evaluate(batchResults);
+					double metricVal = 0.0;
+					
+					Iterator<String> queryIt = batchResults.queryIterator();
+					while (queryIt.hasNext()) {
+						String query = queryIt.next();
+						GQuery gquery = new GQuery();
+						gquery.setTitle(query);
+
+						if (queryResults.scoreExists(gquery, getParamVals(currentParams, 100))) {
+							metricVal += queryResults.getScore(gquery, getParamVals(currentParams, 100));
+						} else {
+							SearchHitsBatch q = new SearchHitsBatch();
+							q.setSearchHits(gquery, batchResults.getSearchHits(query));
+
+							double score = evaluator.evaluate(q);
+							queryResults.setScore(score, gquery, getParamVals(currentParams, 100));
+
+							metricVal += score;
+						}
+					}
+					metricVal /= batchResults.getNumQueries();
+					
+					System.err.println("\t\tScore: "+metricVal);
 					if (metricVal > maxMetric) {
 						maxMetric = metricVal;
 						bestParams.putAll(currentParams);
@@ -99,20 +126,27 @@ public class DoubleEntityRMRunner implements QueryRunner {
 		Iterator<GQuery> qIt = queries.iterator();
 		while (qIt.hasNext()) {
 			GQuery query = qIt.next();
+			
+			SearchHits results = getAlreadyProcessedQuery(query, numResults, params);
+			batchResults.setSearchHits(query.getTitle(), results);	
+		}
+		return batchResults;
+	}
+	
+	private SearchHits getAlreadyProcessedQuery(GQuery query, int numResults, Map<String, Double> params) {
+		double[] paramVals = getParamVals(params, numResults);
+
+		if (!queryResults.resultsExist(query, paramVals)) {
 			query.applyStopper(stopper);
 			query.getFeatureVector().normalize();
 			
 			int fbDocs = 20;
-			try {
+			if (params.containsKey(RMRunner.FEEDBACK_DOCUMENTS)) {
 				fbDocs = params.get(RMRunner.FEEDBACK_DOCUMENTS).intValue();
-			} catch (NullPointerException e) {
-				
 			}
 			int fbTerms = 20;
-			try {
+			if (params.containsKey(RMRunner.FEEDBACK_TERMS)) {
 				params.get(RMRunner.FEEDBACK_TERMS).intValue();
-			} catch (NullPointerException e) {
-				
 			}
 			
 			SearchHits initialHits = getInitialHits(query, numResults);
@@ -160,7 +194,7 @@ public class DoubleEntityRMRunner implements QueryRunner {
 					double docProb = (doc.getFeatureWeight(feature) + mu*collectionScoreSelf) / (doc.getLength() + mu);
 					double entityWikiProb = (wiki.getFeatureWeight(feature) + mu*collectionScoreWiki) / (wiki.getLength() + mu);
 					double entitySelfProb = (self.getFeatureWeight(feature) + mu*collectionScoreSelf) / (self.getLength() + mu);
-
+					
 					double pr = docWeight*docProb +
 							wikiWeight*entityWikiProb +
 							selfWeight*entitySelfProb;
@@ -201,28 +235,29 @@ public class DoubleEntityRMRunner implements QueryRunner {
 			newQuery.setTitle(query.getTitle());
 			newQuery.setFeatureVector(rm3);
 			
-			try {
-				SearchHits results = index.runQuery(newQuery, numResults);
-				batchResults.setSearchHits(query.getTitle(), results);	
-			} catch (Exception e) {
-				System.err.println("Problem with RM:");
-				System.err.println(rm3.toString(5));
-				System.err.println(e.getStackTrace());
-			}
+			SearchHits results = index.runQuery(newQuery, numResults);
+			
+			queryResults.addResults(results, query, paramVals);
 		}
-		return batchResults;
+
+		return queryResults.getResults(query, paramVals);
+	}
+	
+	private double[] getParamVals(Map<String, Double> params, int numResults) {
+		double[] paramsVals = {params.get(DoubleEntityRunner.DOCUMENT_WEIGHT),
+			params.get(DoubleEntityRunner.SELF_WEIGHT),
+			params.get(DoubleEntityRunner.WIKI_WEIGHT),
+			params.get(RMRunner.ORIG_QUERY_WEIGHT),
+			numResults};
+		return paramsVals;
 	}
 	
 	private SearchHits getInitialHits(GQuery query, int count) {
-		if (initialHitsPerQuery == null) {
-			initialHitsPerQuery = new HashMap<GQuery, SearchHits>();
+		if (!initialHitsPerQuery.resultsExist(query)) {
+			SearchHits hits = index.runQuery(query, count);
+			initialHitsPerQuery.addResults(hits, query);
 		}
-		if (initialHitsPerQuery.containsKey(query)) {
-			return initialHitsPerQuery.get(query);
-		}
-		SearchHits hits = index.runQuery(query, count);
-		initialHitsPerQuery.put(query, hits);
-		return hits;
+		return initialHitsPerQuery.getResults(query);
 	}
 
 }
