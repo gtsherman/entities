@@ -178,7 +178,7 @@ public class DoubleEntityRMRunner implements QueryRunner {
 				self.normalize();
 
 				FeatureVector doc = hit.getFeatureVector();
-				doc.normalize();
+				//doc.normalize();
 				
 				double wikiWeight = params.get(DoubleEntityRunner.WIKI_WEIGHT);
 				double selfWeight = params.get(DoubleEntityRunner.SELF_WEIGHT);
