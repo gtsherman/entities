@@ -25,6 +25,8 @@ import edu.gslis.utils.readers.RelevanceModelReader;
 
 public class DoubleEntityRMRunner implements QueryRunner {
 	
+	private final int trainingNumResults = 100;
+	
 	private IndexWrapperIndriImpl index;
 	private IndexWrapperIndriImpl wikiIndex;
 	private Stopper stopper;
@@ -79,7 +81,7 @@ public class DoubleEntityRMRunner implements QueryRunner {
 					currentParams.put(RMRunner.ORIG_QUERY_WEIGHT, lam);
 
 					System.err.println("\t\tParameters: "+origWeight+" (doc), "+wikiWeight+" (wiki), "+selfWeight+" (self), "+lam+" (mixing)");
-					SearchHitsBatch batchResults = run(queries, 100, currentParams);
+					SearchHitsBatch batchResults = run(queries, trainingNumResults, currentParams);
 
 					//double metricVal = evaluator.evaluate(batchResults);
 					double metricVal = 0.0;
@@ -90,14 +92,14 @@ public class DoubleEntityRMRunner implements QueryRunner {
 						GQuery gquery = new GQuery();
 						gquery.setTitle(query);
 
-						if (queryResults.scoreExists(gquery, getParamVals(currentParams, 100))) {
-							metricVal += queryResults.getScore(gquery, getParamVals(currentParams, 100));
+						if (queryResults.scoreExists(gquery, getParamVals(currentParams, trainingNumResults))) {
+							metricVal += queryResults.getScore(gquery, getParamVals(currentParams, trainingNumResults));
 						} else {
 							SearchHitsBatch q = new SearchHitsBatch();
 							q.setSearchHits(gquery, batchResults.getSearchHits(query));
 
 							double score = evaluator.evaluate(q);
-							queryResults.setScore(score, gquery, getParamVals(currentParams, 100));
+							queryResults.setScore(score, gquery, getParamVals(currentParams, trainingNumResults));
 
 							metricVal += score;
 						}
