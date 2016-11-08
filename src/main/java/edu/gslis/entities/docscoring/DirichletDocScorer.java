@@ -10,7 +10,7 @@ import edu.gslis.textrepresentation.FeatureVector;
  * @author garrick
  *
  */
-public class DocScorerDirichlet extends DocScorer {
+public class DirichletDocScorer extends DocScorer {
 	
 	protected double mu = 2500.0;
 	protected double epsilon = 1.0;
@@ -18,18 +18,18 @@ public class DocScorerDirichlet extends DocScorer {
 	private SearchHit doc;
 	private CollectionStats collectionStats;
 	
-	public DocScorerDirichlet(SearchHit doc, CollectionStats collectionStats) {
+	public DirichletDocScorer(SearchHit doc, CollectionStats collectionStats) {
 		setDoc(doc);
 		setCollectionStats(collectionStats);
 	}
 
-	public DocScorerDirichlet(double mu, SearchHit doc, CollectionStats collectionStats) {
+	public DirichletDocScorer(double mu, SearchHit doc, CollectionStats collectionStats) {
 		setMu(mu);
 		setDoc(doc);
 		setCollectionStats(collectionStats);
 	}
 	
-	public DocScorerDirichlet(double mu, double epsilon, SearchHit doc, CollectionStats collectionStats) {
+	public DirichletDocScorer(double mu, double epsilon, SearchHit doc, CollectionStats collectionStats) {
 		setMu(mu);
 		this.epsilon = epsilon;
 		setDoc(doc);

@@ -7,14 +7,14 @@ import java.util.Map;
  * @author garrick
  *
  */
-public class DocScorerInterpolated extends DocScorer {
+public class InterpolatedDocScorer extends DocScorer {
 	
 	private Map<DocScorer, Double> scorers;
 
 	/**
 	 * @param scorers A map linking a DocScorer with its mixing weight. It is the caller's job to enforce any mixing weight constraints.
 	 */
-	public DocScorerInterpolated(Map<DocScorer, Double> scorers) {
+	public InterpolatedDocScorer(Map<DocScorer, Double> scorers) {
 		this.scorers = scorers;
 	}
 	

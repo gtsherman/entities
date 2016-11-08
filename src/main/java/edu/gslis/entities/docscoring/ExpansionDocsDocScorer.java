@@ -12,15 +12,23 @@ import edu.gslis.searchhits.SearchHit;
  * @author garrick
  *
  */
-public class DocScorerExpansionDocs extends DocScorer {
+public class ExpansionDocsDocScorer extends DocScorer {
+	
+	protected double mu = 2500;
 	
 	private SearchHit doc;
 	private IndexWrapperIndriImpl expansionIndex;
 	private DocumentClusterReader clusters;
 	
-	public DocScorerExpansionDocs(SearchHit origDoc, IndexWrapperIndriImpl expansionIndex, DocumentClusterReader clusters) {
+	public ExpansionDocsDocScorer(SearchHit origDoc, IndexWrapperIndriImpl expansionIndex, DocumentClusterReader clusters) {
 		setDoc(origDoc);
 		this.clusters = clusters;
+	}
+	
+	public ExpansionDocsDocScorer(double mu, SearchHit origDoc, IndexWrapperIndriImpl expansionIndex, DocumentClusterReader clusters) {
+		setDoc(origDoc);
+		this.clusters = clusters;
+		this.mu = mu;
 	}
 
 	public void setDoc(SearchHit doc) {
@@ -44,7 +52,7 @@ public class DocScorerExpansionDocs extends DocScorer {
 			expDoc.setDocno(docno);
 			expDoc.setFeatureVector(expansionIndex.getDocVector(docno, null));
 
-			DocScorer expScorer = new DocScorerWithExpansionPrior(expDoc, new DocScorerDirichlet(expDoc, colStats), relatedDocs);
+			DocScorer expScorer = new DocScorerWithExpansionPrior(expDoc, new DirichletDocScorer(mu, expDoc, colStats), relatedDocs);
 			total += expScorer.scoreTerm(term);
 		}
 		

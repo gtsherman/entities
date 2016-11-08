@@ -5,7 +5,7 @@ package edu.gslis.entities.docscoring;
  * @author garrick
  *
  */
-public class DocScorerRelevanceModel extends DocScorer{
+public class RelevanceModelScorer extends DocScorer{
 	
 	private DocScorer termScorer;
 	private double queryWeight;
@@ -14,7 +14,7 @@ public class DocScorerRelevanceModel extends DocScorer{
 	 * @param termScorer Some DocScorer capable of producing P(w|D).
 	 * @param queryWeight The query weight, P(Q|D), probably given by a QueryScorer.
 	 */
-	public DocScorerRelevanceModel(DocScorer termScorer, double queryWeight) {
+	public RelevanceModelScorer(DocScorer termScorer, double queryWeight) {
 		this.termScorer = termScorer;
 		this.queryWeight = queryWeight;
 	}
