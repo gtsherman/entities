@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
-import edu.gslis.entities.docscoring.ScorerDirichletEntityInterpolated;
+import edu.gslis.entities.docscoring.DocScorerInterpolated;
 import edu.gslis.entities.docscoring.support.EntityExpectedProbability;
 import edu.gslis.entities.docscoring.support.EntityProbability;
 import edu.gslis.entities.docscoring.support.EntityPseudoDocumentProbability;
@@ -79,7 +79,7 @@ public class RunEntityBackedRetrieval {
 			numDocs = Integer.parseInt(config.get("num-docs"));
 		}
 
-		ScorerDirichletEntityInterpolated scorer = new ScorerDirichletEntityInterpolated();
+		DocScorerInterpolated scorer = new DocScorerInterpolated();
 		scorer.setCollectionStats(cs);
 		scorer.setCategoryProbability(cp);
 		scorer.setParameter(scorer.PARAMETER_NAME, mu);
