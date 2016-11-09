@@ -1,6 +1,6 @@
 package edu.gslis.entities.docscoring;
 
-public abstract class DocScorerWithDocumentPrior extends DocScorer {
+public abstract class DocScorerWithDocumentPrior implements DocScorer {
 	
 	private DocScorer nonPriorScorer;
 	

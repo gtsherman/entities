@@ -10,7 +10,7 @@ import edu.gslis.textrepresentation.FeatureVector;
  * @author garrick
  *
  */
-public class DirichletDocScorer extends DocScorer {
+public class DirichletDocScorer implements DocScorer {
 	
 	protected double mu = 2500.0;
 	protected double epsilon = 1.0;

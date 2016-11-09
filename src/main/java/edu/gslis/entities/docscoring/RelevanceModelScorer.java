@@ -5,7 +5,7 @@ package edu.gslis.entities.docscoring;
  * @author garrick
  *
  */
-public class RelevanceModelScorer extends DocScorer{
+public class RelevanceModelScorer implements DocScorer{
 	
 	private DocScorer termScorer;
 	private double queryWeight;

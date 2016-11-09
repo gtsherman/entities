@@ -1,7 +1,7 @@
 package edu.gslis.entities.docscoring;
 
-public abstract class DocScorer {
+public interface DocScorer {
 	
-	public abstract double scoreTerm(String term);
+	public double scoreTerm(String term);
 
 }

@@ -13,7 +13,7 @@ import edu.gslis.searchhits.SearchHit;
  * @author garrick
  *
  */
-public class ExpansionDocsDocScorer extends DocScorer {
+public class ExpansionDocsDocScorer implements DocScorer {
 	
 	protected double mu = 2500;
 	

@@ -7,7 +7,7 @@ import java.util.Map;
  * @author garrick
  *
  */
-public class InterpolatedDocScorer extends DocScorer {
+public class InterpolatedDocScorer implements DocScorer {
 	
 	private Map<DocScorer, Double> scorers;
 
