@@ -53,7 +53,7 @@ public class DirichletDocScorer extends DocScorer {
 		FeatureVector docVector = doc.getFeatureVector();
 		double wordCount = docVector.getFeatureWeight(term);
 		double docLength = docVector.getLength();
-		double colProb = epsilon + collectionStats.termCount(term) / collectionStats.getTokCount();
+		double colProb = (epsilon + collectionStats.termCount(term)) / collectionStats.getTokCount();
 		double score = (wordCount + mu * colProb) / (docLength + mu);
 		return score;
 	}
