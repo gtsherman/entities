@@ -8,7 +8,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
 
-import edu.gslis.searchhits.SearchHit;
 import edu.gslis.utils.readers.Reader;
 
 public class DocumentClusterReader extends Reader {
@@ -31,26 +30,19 @@ public class DocumentClusterReader extends Reader {
 		createRelatedDocs();
 	}
 	
-	public Map<String, Double> getRelatedDocs(SearchHit doc) {
-		return getRelatedDocs(doc.getDocno());
-	}
-	
-	public Map<String, Double> getRelatedDocs(String docno) {
-		return relatedDocs.getDocsRelatedTo(docno);
+	public RelatedDocs getClusters() {
+		return relatedDocs;
 	}
 	
 	public void read(File file, int limit) {
 		try {
-			int l = 0;
+			int lineCount = 0;
+			String currentDoc = "";
 			Scanner scanner = new Scanner(file);
 			while (scanner.hasNextLine()) {
-				l++;
-				if (l > limit) {
-					break;
-				}
-
 				String line = scanner.nextLine();
-				
+				lineCount++;
+
 				Map<String, String> field = new HashMap<String, String>();
 
 				String[] parts = line.split(delimiter);
@@ -62,6 +54,16 @@ public class DocumentClusterReader extends Reader {
 					} catch (IndexOutOfBoundsException e) {
 						fieldName = "Field"+i;
 					}
+					
+					if (fieldName.equals(ORIGINAL_DOCUMENT)) {
+						if (!fieldValue.equals(currentDoc)) {
+							lineCount = 1;
+							currentDoc = fieldValue;
+						} else if (lineCount > limit) { // it is the same document as last line
+							continue; // skip this line, we've reached our limit for this document
+						}
+					}
+					
 					field.put(fieldName, fieldValue);
 				}
 				

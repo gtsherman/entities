@@ -3,6 +3,8 @@ package edu.gslis.related_docs;
 import java.util.HashMap;
 import java.util.Map;
 
+import edu.gslis.searchhits.SearchHit;
+
 public class RelatedDocs {
 
 	protected Map<String, Map<String, Double>> relatedDocScores = new HashMap<String, Map<String, Double>>();
@@ -12,6 +14,14 @@ public class RelatedDocs {
 			relatedDocScores.put(origDoc, new HashMap<String, Double>());
 		}
 		relatedDocScores.get(origDoc).put(relatedDoc, score);
+	}
+	
+	/**
+	 * @param doc Original doc. Must have docno field set.
+	 * @return <docno, score> map for all docs related to the original doc, or null if none exist.
+	 */
+	public Map<String, Double> getDocsRelatedTo(SearchHit doc) {
+		return getDocsRelatedTo(doc.getDocno());
 	}
 	
 	/**
