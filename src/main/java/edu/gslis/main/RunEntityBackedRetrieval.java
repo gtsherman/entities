@@ -15,7 +15,7 @@ import edu.gslis.entities.docscoring.DocScorer;
 import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.entities.docscoring.InterpolatedDocScorer;
 import edu.gslis.entities.docscoring.QueryScorer;
-import edu.gslis.entities.docscoring.QueryScorerQueryLikelihood;
+import edu.gslis.entities.docscoring.QueryLikelihoodQueryScorer;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
@@ -94,7 +94,7 @@ public class RunEntityBackedRetrieval {
 
 				InterpolatedDocScorer docScorer = new InterpolatedDocScorer(scorerWeights);
 				
-				QueryScorer scorer = new QueryScorerQueryLikelihood(docScorer);
+				QueryScorer scorer = new QueryLikelihoodQueryScorer(docScorer);
 				hit.setScore(scorer.scoreQuery(query));
 			}
 			hits.rank();

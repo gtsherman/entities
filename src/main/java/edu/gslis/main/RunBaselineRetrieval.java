@@ -10,7 +10,7 @@ import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.docscoring.DirichletDocScorer;
 import edu.gslis.entities.docscoring.QueryScorer;
-import edu.gslis.entities.docscoring.QueryScorerQueryLikelihood;
+import edu.gslis.entities.docscoring.QueryLikelihoodQueryScorer;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
@@ -62,7 +62,7 @@ public class RunBaselineRetrieval {
 			while (hitIt.hasNext()) {
 				SearchHit hit = new IndexBackedSearchHit(index, hitIt.next());
 
-				QueryScorer scorer = new QueryScorerQueryLikelihood(new DirichletDocScorer(hit, cs));
+				QueryScorer scorer = new QueryLikelihoodQueryScorer(new DirichletDocScorer(hit, cs));
 				double score = scorer.scoreQuery(query);
 				
 				hit.setScore(score);

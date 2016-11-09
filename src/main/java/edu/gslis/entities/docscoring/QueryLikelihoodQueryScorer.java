@@ -9,11 +9,11 @@ import edu.gslis.queries.GQuery;
  * @author garrick
  *
  */
-public class QueryScorerQueryLikelihood implements QueryScorer {
+public class QueryLikelihoodQueryScorer implements QueryScorer {
 
 	private DocScorer termScorer;
 	
-	public QueryScorerQueryLikelihood(DocScorer termScorer) {
+	public QueryLikelihoodQueryScorer(DocScorer termScorer) {
 		this.termScorer = termScorer;
 	}
 	
