@@ -4,7 +4,8 @@ import java.util.Map;
 
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
-import edu.gslis.related_docs.DocumentClusterReader;
+import edu.gslis.related_docs.RelatedDocs;
+import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
 
 /**
@@ -18,16 +19,16 @@ public class ExpansionDocsDocScorer extends DocScorer {
 	
 	private SearchHit doc;
 	private IndexWrapperIndriImpl expansionIndex;
-	private DocumentClusterReader clusters;
+	private RelatedDocs clusters;
 	
-	public ExpansionDocsDocScorer(SearchHit origDoc, IndexWrapperIndriImpl expansionIndex, DocumentClusterReader clusters) {
+	public ExpansionDocsDocScorer(SearchHit origDoc, IndexWrapperIndriImpl expansionIndex, RelatedDocs clusters) {
 		setDoc(origDoc);
+		this.expansionIndex = expansionIndex;
 		this.clusters = clusters;
 	}
 	
-	public ExpansionDocsDocScorer(double mu, SearchHit origDoc, IndexWrapperIndriImpl expansionIndex, DocumentClusterReader clusters) {
-		setDoc(origDoc);
-		this.clusters = clusters;
+	public ExpansionDocsDocScorer(double mu, SearchHit origDoc, IndexWrapperIndriImpl expansionIndex, RelatedDocs clusters) {
+		this(origDoc, expansionIndex, clusters);
 		this.mu = mu;
 	}
 
@@ -37,20 +38,20 @@ public class ExpansionDocsDocScorer extends DocScorer {
 	
 	@Override
 	public double scoreTerm(String term) {
-		Map<String, Double> relatedDocs = clusters.getRelatedDocs(doc);
+		Map<String, Double> relatedDocs = clusters.getDocsRelatedTo(doc.getDocno());
+
+		double total = 0.0;
+		if (relatedDocs == null) {
+			System.err.println("No related docs for "+doc.getDocno());
+			return total;
+		}
 
 		IndexBackedCollectionStats colStats = new IndexBackedCollectionStats();
 		colStats.setStatSource(expansionIndex);
 
-		double total = 0.0;
-		if (relatedDocs == null) {
-			return total;
-		}
-
 		for (String docno : relatedDocs.keySet()) {
-			SearchHit expDoc = new SearchHit();
+			SearchHit expDoc = new IndexBackedSearchHit(expansionIndex);
 			expDoc.setDocno(docno);
-			expDoc.setFeatureVector(expansionIndex.getDocVector(docno, null));
 
 			DocScorer expScorer = new DocScorerWithExpansionPrior(expDoc, new DirichletDocScorer(mu, expDoc, colStats), relatedDocs);
 			total += expScorer.scoreTerm(term);

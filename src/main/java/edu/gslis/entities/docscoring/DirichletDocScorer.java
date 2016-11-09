@@ -24,16 +24,13 @@ public class DirichletDocScorer extends DocScorer {
 	}
 
 	public DirichletDocScorer(double mu, SearchHit doc, CollectionStats collectionStats) {
+		this(doc, collectionStats);
 		setMu(mu);
-		setDoc(doc);
-		setCollectionStats(collectionStats);
 	}
 	
 	public DirichletDocScorer(double mu, double epsilon, SearchHit doc, CollectionStats collectionStats) {
-		setMu(mu);
+		this(mu, doc, collectionStats);
 		this.epsilon = epsilon;
-		setDoc(doc);
-		setCollectionStats(collectionStats);
 	}
 	
 	public void setDoc(SearchHit doc) {

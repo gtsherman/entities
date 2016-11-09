@@ -8,11 +8,13 @@ import java.util.Iterator;
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.docscoring.DocScorer;
-import edu.gslis.entities.docscoring.DocScorerExpansionDocs;
+import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.related_docs.DocumentClusterReader;
+import edu.gslis.related_docs.RelatedDocs;
+import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.utils.Stopper;
@@ -20,12 +22,13 @@ import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
 import edu.gslis.utils.readers.SearchResultsReader;
 
-public class PrecomputeEntityProbabilities {
+public class PrecomputeClusterTermProbabilities {
 	
 	public static void main(String[] args) {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
 		
+		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
 		IndexWrapperIndriImpl wikiIndex = null;
 		if (config.get("wiki-index") != null)
 			wikiIndex = new IndexWrapperIndriImpl(config.get("wiki-index"));
@@ -40,7 +43,8 @@ public class PrecomputeEntityProbabilities {
 		queries.read(config.get("queries"));
 		
 		int numEntities = Integer.parseInt(args[1]);
-		DocumentClusterReader clusters = new DocumentClusterReader(new File(config.get("document-entities-file")), numEntities);
+		DocumentClusterReader clustersReader = new DocumentClusterReader(new File(config.get("document-entities-file")), numEntities);
+		RelatedDocs clusters = clustersReader.getClusters();
 		
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
@@ -67,10 +71,9 @@ public class PrecomputeEntityProbabilities {
 
 			Iterator<SearchHit> hitIt = initialHits.iterator();
 			while (hitIt.hasNext()) {
-				SearchHit doc = hitIt.next();
-				doc.setFeatureVector(wikiIndex.getDocVector(doc.getDocID(), null));
+				SearchHit doc = new IndexBackedSearchHit(index, hitIt.next());
 				
-				DocScorer expansionBatchScorer = new DocScorerExpansionDocs(doc, wikiIndex, clusters);
+				DocScorer expansionBatchScorer = new ExpansionDocsDocScorer(doc, wikiIndex, clusters);
 				try {
 					FileWriter out = new FileWriter(outDir + File.separator + doc.getDocno());
 					Iterator<String> qtermIt = query.getFeatureVector().iterator();
