@@ -1,20 +1,27 @@
 package edu.gslis.main;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 
+import edu.gslis.docscoring.support.CollectionStats;
+import edu.gslis.docscoring.support.IndexBackedCollectionStats;
+import edu.gslis.entities.docscoring.expansion.RM1Builder;
+import edu.gslis.entities.docscoring.expansion.RM3Builder;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
-import edu.gslis.queries.expansion.FeedbackRelevanceModel;
+import edu.gslis.searchhits.IndexBackedSearchHits;
 import edu.gslis.searchhits.SearchHits;
+import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
+import edu.gslis.utils.readers.SearchResultsReader;
 
 public class RunBaselineRelevanceModel {
 	
@@ -23,6 +30,9 @@ public class RunBaselineRelevanceModel {
 		config.read(args[0]);
 		
 		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
+		
+		CollectionStats cs = new IndexBackedCollectionStats();
+		cs.setStatSource(config.get("index"));
 
 		Stopper stopper = null;
 		if (config.get("stoplist") != null)
@@ -35,6 +45,9 @@ public class RunBaselineRelevanceModel {
 		if (config.get("num-docs") != null) {
 			numDocs = Integer.parseInt(config.get("num-docs"));
 		}
+		
+		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")));
+		SearchHitsBatch batchResults = resultsReader.getBatchResults();
 		
 		int fbDocs = 20;
 		if (config.get("fb-docs") != null) {
@@ -61,25 +74,18 @@ public class RunBaselineRelevanceModel {
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
 			query.applyStopper(stopper);
-			query.getFeatureVector().normalize();
-			
-			FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
-			rm.setIndex(index);
-			rm.setDocCount(fbDocs);
-			rm.setTermCount(fbTerms);
-			rm.setStopper(stopper);
-			rm.setOriginalQuery(query);
-			
-			rm.build();
-			FeatureVector rmVec = rm.asGquery().getFeatureVector();
-			rmVec.normalize();
 
-			rmVec = FeatureVector.interpolate(query.getFeatureVector(), rmVec, origQueryWeight);
+			SearchHits hits = IndexBackedSearchHits.convertToIndexBackedSearchHits(batchResults.getSearchHits(query), index);
+
+			RM1Builder rmBuilder = new RM1Builder(query, hits, fbDocs, fbTerms, cs);
+			RM3Builder rm3Builder = new RM3Builder(query, rmBuilder);
+			FeatureVector rmVec = rm3Builder.buildRelevanceModel(origQueryWeight, stopper);
+			
 			GQuery rmQuery = new GQuery();
 			rmQuery.setFeatureVector(rmVec);
 			rmQuery.setTitle(query.getTitle());
 			
-			SearchHits hits = index.runQuery(rmQuery, numDocs);
+			hits = index.runQuery(rmQuery, numDocs);
 			output.write(hits, query.getTitle());
 		}
 		output.close();

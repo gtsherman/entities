@@ -1,4 +1,6 @@
-package edu.gslis.entities.docscoring;
+package edu.gslis.entities.docscoring.expansion;
+
+import edu.gslis.entities.docscoring.DocScorer;
 
 /**
  * Computes the relevance model score for a given term.
@@ -12,7 +14,7 @@ public class RelevanceModelScorer implements DocScorer{
 	
 	/**
 	 * @param termScorer Some DocScorer capable of producing P(w|D).
-	 * @param queryWeight The query weight, P(Q|D), probably given by a QueryScorer.
+	 * @param queryWeight The query weight, P(Q|D), probably given by a QueryScorer. Careful not to provide a logarithm!
 	 */
 	public RelevanceModelScorer(DocScorer termScorer, double queryWeight) {
 		this.termScorer = termScorer;
