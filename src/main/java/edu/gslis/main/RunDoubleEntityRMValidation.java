@@ -20,7 +20,6 @@ import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.readers.DocumentEntityReader;
-import edu.gslis.readers.QueryProbabilityReader;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
@@ -66,9 +65,6 @@ public class RunDoubleEntityRMValidation {
 		if (targetMetric.equalsIgnoreCase("ndcg")) {
 			evaluator = new NDCGEvaluator(qrels);
 		}
-		
-		QueryProbabilityReader qpreader = new QueryProbabilityReader();
-		qpreader.setBasePath(forQueryProbs);
 		
 		long seed = Long.parseLong(args[1]);
 

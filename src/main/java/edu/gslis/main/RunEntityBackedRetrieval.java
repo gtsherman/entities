@@ -14,14 +14,15 @@ import edu.gslis.entities.docscoring.DirichletDocScorer;
 import edu.gslis.entities.docscoring.DocScorer;
 import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.entities.docscoring.InterpolatedDocScorer;
-import edu.gslis.entities.docscoring.QueryScorer;
 import edu.gslis.entities.docscoring.QueryLikelihoodQueryScorer;
+import edu.gslis.entities.docscoring.QueryScorer;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.related_docs.DocumentClusterReader;
 import edu.gslis.related_docs.RelatedDocs;
+import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.utils.Stopper;
@@ -82,8 +83,7 @@ public class RunEntityBackedRetrieval {
 
 			Iterator<SearchHit> hitIt = hits.iterator();
 			while (hitIt.hasNext()) {
-				SearchHit hit = hitIt.next();
-				hit.setFeatureVector(index.getDocVector(hit.getDocno(), null));
+				SearchHit hit = new IndexBackedSearchHit(index, hitIt.next());
 			
 				DocScorer hitScorer = new DirichletDocScorer(mu, hit, cs);
 				DocScorer expansionScorer = new ExpansionDocsDocScorer(hit, wikiIndex, clusters);

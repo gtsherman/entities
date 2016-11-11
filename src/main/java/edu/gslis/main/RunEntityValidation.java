@@ -1,6 +1,7 @@
 package edu.gslis.main;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
@@ -11,15 +12,14 @@ import edu.gslis.evaluation.evaluators.MAPEvaluator;
 import edu.gslis.evaluation.evaluators.NDCGEvaluator;
 import edu.gslis.evaluation.running.runners.EntityRunner;
 import edu.gslis.evaluation.validators.KFoldValidator;
-import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
-import edu.gslis.readers.QueryProbabilityReader;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
+import edu.gslis.utils.readers.SearchResultsReader;
 
 public class RunEntityValidation {
 	
@@ -27,11 +27,13 @@ public class RunEntityValidation {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
 		
-		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
 		Stopper stopper = new Stopper(config.get("stoplist"));
+
 		GQueries queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
+
 		Qrels qrels = new Qrels(config.get("qrels"), false, 1);
+
 		String forQueryProbs = config.get("for-query-probs");
 		String targetMetric = config.get("target-metric");
 		
@@ -43,8 +45,8 @@ public class RunEntityValidation {
 			}
 		}
 		
-		QueryProbabilityReader qpreader = new QueryProbabilityReader();
-		qpreader.setBasePath(forQueryProbs);
+		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")));
+		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
 		
 		long seed = Long.parseLong(args[1]);
 		
@@ -53,14 +55,15 @@ public class RunEntityValidation {
 			evaluator = new NDCGEvaluator(qrels);
 		}
 		
-		EntityRunner runner = new EntityRunner(index, qpreader, stopper);
+		EntityRunner runner = new EntityRunner(initialHitsBatch, forQueryProbs, stopper);
+		runner.setNumEntities(10);
 		runner.setModel(model);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
-		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
+		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("singleEntity", outputWriter);
 		
 		Iterator<String> qit = batchResults.queryIterator();
 		while (qit.hasNext()) {

@@ -1,6 +1,7 @@
 package edu.gslis.main;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -16,15 +17,14 @@ import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
-import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
-import edu.gslis.readers.QueryProbabilityReader;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
+import edu.gslis.utils.readers.SearchResultsReader;
 
 public class RunDoubleEntitySweep {
 	
@@ -34,8 +34,6 @@ public class RunDoubleEntitySweep {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
 		
-		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
-		
 		Stopper stopper = null;
 		if (config.get("stoplist") != null)
 			stopper = new Stopper(config.get("stoplist"));
@@ -43,9 +41,6 @@ public class RunDoubleEntitySweep {
 		GQueriesJsonImpl queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
 		
-		QueryProbabilityReader qpreader = new QueryProbabilityReader();
-		qpreader.setBasePath(config.get("entity-probs"));
-
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 		
@@ -54,12 +49,17 @@ public class RunDoubleEntitySweep {
 			numDocs = Integer.parseInt(config.get("num-docs"));
 		}
 		
+		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")));
+		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
+		
+		String entityProbsPath = config.get("entity-probs");
+		
 		String outDir = config.get("out-dir"); 
 
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
 		
-		QueryRunner runner = new DoubleEntityRunner(index, qpreader, stopper);
+		QueryRunner runner = new DoubleEntityRunner(initialHitsBatch, entityProbsPath, stopper);
 		
 		Map<String, Double> params = new HashMap<String, Double>();
 		

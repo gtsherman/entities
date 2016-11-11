@@ -1,15 +1,20 @@
 package edu.gslis.evaluation.running.runners;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import edu.gslis.entities.docscoring.DocScorer;
+import edu.gslis.entities.docscoring.FileLookupDocScorer;
+import edu.gslis.entities.docscoring.InterpolatedDocScorer;
+import edu.gslis.entities.docscoring.QueryLikelihoodQueryScorer;
+import edu.gslis.entities.docscoring.QueryScorer;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
-import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
-import edu.gslis.readers.QueryProbabilityReader;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
@@ -21,15 +26,15 @@ public class DoubleEntityRunner implements QueryRunner {
 	public static final String WIKI_WEIGHT = "wiki";
 	public static final String SELF_WEIGHT = "self";
 
-	private IndexWrapperIndriImpl index;
-	private QueryProbabilityReader qpreader;
+	private SearchHitsBatch initialResultsBatch;
+	private String basePath;
 	private Stopper stopper;
 	
 	private int numEntities = 10;
 	
-	public DoubleEntityRunner(IndexWrapperIndriImpl index, QueryProbabilityReader qpreader, Stopper stopper) {
-		this.index = index;
-		this.qpreader = qpreader;
+	public DoubleEntityRunner(SearchHitsBatch initialResultsBatch, String basePath, Stopper stopper) {
+		this.initialResultsBatch = initialResultsBatch;
+		this.basePath = basePath;
 		this.stopper = stopper;
 	}
 	
@@ -77,41 +82,42 @@ public class DoubleEntityRunner implements QueryRunner {
 			GQuery query = queryIt.next();
 			query.applyStopper(stopper);
 			
-			SearchHits initialHits = index.runQuery(query, numResults);
+			SearchHits initialHits = getInitialHits(query, numResults);
+
 			Iterator<SearchHit> hitIt = initialHits.iterator();
 			while (hitIt.hasNext()) {
 				SearchHit doc = hitIt.next();
 
-				qpreader.readFileRelative("docProbs/"+query.getTitle()+"/"+doc.getDocno());
-				Map<String, Double> termProbsDoc = qpreader.getTermProbs();
-				qpreader.readFileRelative("entityProbsWiki."+numEntities+"/"+query.getTitle()+"/"+doc.getDocno());
-				Map<String, Double> termProbsWiki = qpreader.getTermProbs();
-				qpreader.readFileRelative("entityProbsSelf."+numEntities+"/"+query.getTitle()+"/"+doc.getDocno());
-				Map<String, Double> termProbsSelf = qpreader.getTermProbs();
-
-				double logLikelihood = 0.0;
-				Iterator<String> queryIterator = query.getFeatureVector().iterator();
-				while(queryIterator.hasNext()) {
-					String feature = queryIterator.next();
-
-					double docProb = termProbsDoc.get(feature);
-					double entityWikiProb = termProbsWiki.get(feature);
-					double entitySelfProb = termProbsSelf.get(feature);
-
-					double pr = params.get(DOCUMENT_WEIGHT)*docProb +
-							params.get(WIKI_WEIGHT)*entityWikiProb +
-							params.get(SELF_WEIGHT)*entitySelfProb;
-					double queryWeight = query.getFeatureVector().getFeatureWeight(feature);
-					logLikelihood += queryWeight * Math.log(pr);
-				}
+				DocScorer docScorer = new FileLookupDocScorer(basePath + File.separator + "docProbs" +
+						File.separator + query.getTitle() + File.separator + doc.getDocno());
+				DocScorer wikiDocScorer = new FileLookupDocScorer(basePath + "entityProbsWiki" +
+						"." + numEntities + File.separator + query.getTitle() + File.separator + doc.getDocno());
+				DocScorer selfDocScorer = new FileLookupDocScorer(basePath + "entityProbsSelf" +
+						"." + numEntities + File.separator + query.getTitle() + File.separator + doc.getDocno());
+				
+				Map<DocScorer, Double> scorerWeights = new HashMap<DocScorer, Double>();
+				scorerWeights.put(docScorer, params.get(DOCUMENT_WEIGHT));
+				scorerWeights.put(wikiDocScorer, params.get(WIKI_WEIGHT));
+				scorerWeights.put(selfDocScorer, params.get(SELF_WEIGHT));
+				
+				DocScorer interpolatedScorer = new InterpolatedDocScorer(scorerWeights);
+				
+				QueryScorer queryScorer = new QueryLikelihoodQueryScorer(interpolatedScorer);
 			
-				doc.setScore(logLikelihood);
+				doc.setScore(queryScorer.scoreQuery(query));
 			}
 			
 			initialHits.rank();
 			batchResults.setSearchHits(query.getTitle(), initialHits);
 		}
 		return batchResults;
+	}
+	
+	private SearchHits getInitialHits(GQuery query, int numResults) {
+		SearchHits hits = initialResultsBatch.getSearchHits(query);
+		SearchHits cropped = new SearchHits(new ArrayList<SearchHit>(hits.hits()));
+		cropped.crop(numResults);
+		return cropped;
 	}
 
 }

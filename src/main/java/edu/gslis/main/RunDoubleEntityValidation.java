@@ -1,6 +1,7 @@
 package edu.gslis.main;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
@@ -13,15 +14,14 @@ import edu.gslis.evaluation.evaluators.MAPEvaluator;
 import edu.gslis.evaluation.evaluators.NDCGEvaluator;
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
 import edu.gslis.evaluation.validators.KFoldValidator;
-import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
-import edu.gslis.readers.QueryProbabilityReader;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
+import edu.gslis.utils.readers.SearchResultsReader;
 
 public class RunDoubleEntityValidation {
 	
@@ -29,7 +29,6 @@ public class RunDoubleEntityValidation {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
 		
-		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
 		Stopper stopper = new Stopper(config.get("stoplist"));
 		GQueries queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
@@ -50,15 +49,15 @@ public class RunDoubleEntityValidation {
 			evaluator = new NDCGEvaluator(qrels);
 		}
 		
-		QueryProbabilityReader qpreader = new QueryProbabilityReader();
-		qpreader.setBasePath(forQueryProbs);
+		SearchResultsReader resultsReader = new SearchResultsReader(new File("initial-hits"));
+		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
 		
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 		
 		long seed = Long.parseLong(args[1]);
 
-		DoubleEntityRunner runner = new DoubleEntityRunner(index, qpreader, stopper);
+		DoubleEntityRunner runner = new DoubleEntityRunner(initialHitsBatch, forQueryProbs, stopper);
 		runner.setNumEntities(numEntities);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
