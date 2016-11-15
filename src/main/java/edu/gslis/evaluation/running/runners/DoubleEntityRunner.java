@@ -13,6 +13,7 @@ import edu.gslis.entities.docscoring.QueryLikelihoodQueryScorer;
 import edu.gslis.entities.docscoring.QueryScorer;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
+import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
@@ -29,6 +30,8 @@ public class DoubleEntityRunner implements QueryRunner {
 	private SearchHitsBatch initialResultsBatch;
 	private String basePath;
 	private Stopper stopper;
+	
+	private ParameterizedResults processedQueries = new ParameterizedResults();
 	
 	private int numEntities = 10;
 	
@@ -81,6 +84,19 @@ public class DoubleEntityRunner implements QueryRunner {
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
+			SearchHits processedHits = getProcessedQueryResults(query, numResults, params);			
+			batchResults.setSearchHits(query.getTitle(), processedHits);
+		}
+		return batchResults;
+	}
+	
+	private SearchHits getProcessedQueryResults(GQuery query, int numResults, Map<String, Double> params) {
+		double[] paramVals = {params.get(DOCUMENT_WEIGHT),
+				params.get(SELF_WEIGHT),
+				params.get(WIKI_WEIGHT),
+				numResults};
+
+		if (!processedQueries.resultsExist(query, paramVals)) {
 			query.applyStopper(stopper);
 			
 			SearchHits initialHits = getInitialHits(query, numResults);
@@ -109,15 +125,18 @@ public class DoubleEntityRunner implements QueryRunner {
 			}
 			
 			initialHits.rank();
-			batchResults.setSearchHits(query.getTitle(), initialHits);
+			processedQueries.addResults(initialHits, query, paramVals);
 		}
-		return batchResults;
+
+		return processedQueries.getResults(query, paramVals);
 	}
 	
 	private SearchHits getInitialHits(GQuery query, int numResults) {
 		SearchHits hits = initialResultsBatch.getSearchHits(query);
 		SearchHits cropped = new SearchHits(new ArrayList<SearchHit>(hits.hits()));
-		cropped.crop(numResults);
+		if (numResults < hits.size()) {
+			cropped.crop(numResults);
+		}
 		return cropped;
 	}
 
