@@ -9,9 +9,6 @@ import java.util.Iterator;
 import java.util.Scanner;
 import java.util.Set;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
@@ -24,8 +21,6 @@ import edu.gslis.utils.config.SimpleConfiguration;
 
 public class CreateDocumentClusters {
 	
-	static final Logger logger = LoggerFactory.getLogger(CreateDocumentClusters.class);
-
 	public static void main(String[] args) {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
@@ -52,7 +47,6 @@ public class CreateDocumentClusters {
 		
 		Set<String> docs = new HashSet<String>();
 		String documentsFile = config.get("documents-file");
-		logger.info("Using documents in "+documentsFile);
 		try {
 			Scanner scanner = new Scanner(new File(documentsFile));
 			while (scanner.hasNextLine()) {
@@ -61,14 +55,13 @@ public class CreateDocumentClusters {
 			}
 			scanner.close();
 		} catch (Exception e) {
-			logger.error("Error reading file: "+documentsFile+". This file is required. Exiting...");
+			System.err.println("Error reading file: "+documentsFile+". This file is required. Exiting...");
 			System.exit(-1);
 		} 
 		
 		Iterator<String> docIt = docs.iterator();
 		while (docIt.hasNext()) {
 			String doc = docIt.next();
-			logger.info("Getting results for document "+doc);
 			
 			FeatureVector dv = index.getDocVector(doc, stopper);
 			dv.clip(documentTerms);

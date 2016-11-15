@@ -4,9 +4,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
@@ -20,8 +17,6 @@ import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
 
 public class CreateRMs {
-
-	static final Logger logger = LoggerFactory.getLogger(CreateRMs.class);
 
 	public static void main(String[] args) throws IOException {
 		Configuration config = new SimpleConfiguration();
@@ -52,12 +47,11 @@ public class CreateRMs {
 		}
 		
 		Iterator<GQuery> queryIt = queries.iterator();
-		int i = 1;
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
 			query.applyStopper(stopper);
 			
-			logger.info("Working on query "+query.getTitle()+". ("+i+++"/"+queries.numQueries()+")");
+			System.err.println("Query "+query.getTitle());
 
 			if (query.getFeatureVector().getLength() == 0) {
 				continue;

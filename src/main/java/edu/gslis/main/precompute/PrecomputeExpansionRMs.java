@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.util.Iterator;
 
 import org.apache.commons.io.FileUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
@@ -22,8 +20,6 @@ import edu.gslis.utils.config.SimpleConfiguration;
 
 public class PrecomputeExpansionRMs {
 	
-	static final Logger logger = LoggerFactory.getLogger(PrecomputeExpansionRMs.class);
-
 	public static void main(String[] args) throws IOException {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);

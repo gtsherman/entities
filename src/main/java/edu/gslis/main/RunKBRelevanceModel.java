@@ -5,9 +5,6 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
@@ -23,8 +20,6 @@ import edu.gslis.utils.config.SimpleConfiguration;
 
 public class RunKBRelevanceModel {
 	
-	final static Logger logger = LoggerFactory.getLogger(RunKBRelevanceModel.class);
-
 	public static void main(String[] args) {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
@@ -68,12 +63,10 @@ public class RunKBRelevanceModel {
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
 		
 		Iterator<GQuery> queryIt = queries.iterator();
-		int i = 0;
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
 			
-			i++;
-			logger.info("Working on query "+query.getTitle()+". ("+i+"/"+queries.numQueries()+")");
+			System.err.println("Query "+query.getTitle());
 			
 			FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
 			rm.setIndex(wikiIndex);
