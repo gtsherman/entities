@@ -10,9 +10,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.evaluation.running.QueryRunner;
@@ -28,8 +25,6 @@ import edu.gslis.utils.readers.SearchResultsReader;
 
 public class RunDoubleEntitySweep {
 	
-	static final Logger logger = LoggerFactory.getLogger(RunDoubleEntitySweep.class);
-
 	public static void main(String[] args) throws IOException {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
@@ -52,12 +47,11 @@ public class RunDoubleEntitySweep {
 		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")));
 		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
 		
-		String entityProbsPath = config.get("entity-probs");
-		
-		String outDir = config.get("out-dir"); 
+		String entityProbsPath = config.get("for-query-probs");
+		String outDir = config.get("double-entity-sweep-dir"); 
 
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
-		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
+		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("doubleEntity", outputWriter);
 		
 		QueryRunner runner = new DoubleEntityRunner(initialHitsBatch, entityProbsPath, stopper);
 		
@@ -70,9 +64,9 @@ public class RunDoubleEntitySweep {
 				double wikiWeight = wikiW / 10.0;
 				double selfWeight = (10-(origW+wikiW)) / 10.0;
 
-				String run = origWeight+"_"+wikiWeight+"_"+selfWeight;
+				String run = origWeight + "_" + wikiWeight + "_" + selfWeight;
 				output.setRunId(run);
-				output.setWriter(new FileWriter(outDir+"/"+run));
+				output.setWriter(new FileWriter(outDir + File.separator + run));
 				
 				params.put(DoubleEntityRunner.WIKI_WEIGHT, wikiWeight);
 				params.put(DoubleEntityRunner.SELF_WEIGHT, selfWeight);
@@ -87,7 +81,6 @@ public class RunDoubleEntitySweep {
 				}
 			}
 		}
-			
 		output.close();
 	}
 

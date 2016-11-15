@@ -54,7 +54,8 @@ public class DoubleEntityRunner implements QueryRunner {
 				currentParams.put(DoubleEntityRunner.WIKI_WEIGHT, wikiWeight);
 				currentParams.put(DoubleEntityRunner.SELF_WEIGHT, selfWeight);
 
-				SearchHitsBatch batchResults = run(queries, 100, currentParams);
+				System.err.println("\t\tParameters: " + origWeight + " (doc), " + wikiWeight + " (wiki), " + selfWeight + " (self)");
+				SearchHitsBatch batchResults = run(queries, 1000, currentParams);
 				
 				double metricVal = evaluator.evaluate(batchResults);
 				if (metricVal > maxMetric) {
@@ -64,9 +65,9 @@ public class DoubleEntityRunner implements QueryRunner {
 			}
 		}
 	
-		System.err.println("Best parameters:");
+		System.err.println("\tBest parameters:");
 		for (String param : bestParams.keySet()) {
-			System.err.println(param+": "+bestParams.get(param));
+			System.err.println("\t\t" + param + ": "+bestParams.get(param));
 		}
 		return bestParams;
 	}
@@ -88,11 +89,11 @@ public class DoubleEntityRunner implements QueryRunner {
 			while (hitIt.hasNext()) {
 				SearchHit doc = hitIt.next();
 
-				DocScorer docScorer = new FileLookupDocScorer(basePath + File.separator + "docProbs" +
+				DocScorer docScorer = new FileLookupDocScorer(basePath + File.separator + "docProbsNew" +
 						File.separator + query.getTitle() + File.separator + doc.getDocno());
-				DocScorer wikiDocScorer = new FileLookupDocScorer(basePath + "entityProbsWiki" +
+				DocScorer wikiDocScorer = new FileLookupDocScorer(basePath + File.separator + "entityProbsWikiNew" +
 						"." + numEntities + File.separator + query.getTitle() + File.separator + doc.getDocno());
-				DocScorer selfDocScorer = new FileLookupDocScorer(basePath + "entityProbsSelf" +
+				DocScorer selfDocScorer = new FileLookupDocScorer(basePath + File.separator + "entityProbsSelfNew" +
 						"." + numEntities + File.separator + query.getTitle() + File.separator + doc.getDocno());
 				
 				Map<DocScorer, Double> scorerWeights = new HashMap<DocScorer, Double>();

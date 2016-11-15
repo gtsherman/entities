@@ -49,7 +49,7 @@ public class RunDoubleEntityValidation {
 			evaluator = new NDCGEvaluator(qrels);
 		}
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File("initial-hits"));
+		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")));
 		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
 		
 		CollectionStats cs = new IndexBackedCollectionStats();
@@ -64,7 +64,7 @@ public class RunDoubleEntityValidation {
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
-		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
+		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("doubleExpansion", outputWriter);
 		
 		Iterator<String> qit = batchResults.queryIterator();
 		while (qit.hasNext()) {
