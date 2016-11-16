@@ -3,7 +3,7 @@ package edu.gslis.entities.docscoring;
 import java.util.Map;
 
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
-import edu.gslis.indexes.IndexWrapperIndriImpl;
+import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.related_docs.RelatedDocs;
 import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
@@ -18,16 +18,16 @@ public class ExpansionDocsDocScorer implements DocScorer {
 	protected double mu = 2500;
 	
 	private SearchHit doc;
-	private IndexWrapperIndriImpl expansionIndex;
+	private IndexWrapper expansionIndex;
 	private RelatedDocs clusters;
 	
-	public ExpansionDocsDocScorer(SearchHit origDoc, IndexWrapperIndriImpl expansionIndex, RelatedDocs clusters) {
+	public ExpansionDocsDocScorer(SearchHit origDoc, IndexWrapper expansionIndex, RelatedDocs clusters) {
 		setDoc(origDoc);
 		this.expansionIndex = expansionIndex;
 		this.clusters = clusters;
 	}
 	
-	public ExpansionDocsDocScorer(double mu, SearchHit origDoc, IndexWrapperIndriImpl expansionIndex, RelatedDocs clusters) {
+	public ExpansionDocsDocScorer(double mu, SearchHit origDoc, IndexWrapper expansionIndex, RelatedDocs clusters) {
 		this(origDoc, expansionIndex, clusters);
 		this.mu = mu;
 	}
