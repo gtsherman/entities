@@ -32,7 +32,6 @@ public class RunRMValidation {
 		GQueries queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
 		Qrels qrels = new Qrels(config.get("qrels"), false, 1);
-		String rmsDir = config.get("rms-dir");
 		String targetMetric = config.get("target-metric");
 		
 		Evaluator evaluator = new MAPEvaluator(qrels);
@@ -42,13 +41,13 @@ public class RunRMValidation {
 		
 		long seed = Long.parseLong(args[1]);
 		
-		QueryRunner runner = new RMRunner(index, stopper, rmsDir);
+		QueryRunner runner = new RMRunner(index, stopper);
 		KFoldValidator validator = new KFoldValidator(runner);
 
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
-		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
+		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("kfoldRM3", outputWriter);
 		
 		Iterator<String> qit = batchResults.queryIterator();
 		while (qit.hasNext()) {
