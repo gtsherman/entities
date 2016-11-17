@@ -54,7 +54,7 @@ public class EntityRunner implements QueryRunner {
 			currentParams.put(EntityRunner.EXPANSION_WEIGHT, wikiWeight);
 				
 			System.err.println("\t\tParameters: " + origWeight + " (doc), " + wikiWeight + " (expansion)");
-			SearchHitsBatch batchResults = run(queries, 100, currentParams);
+			SearchHitsBatch batchResults = run(queries, 1000, currentParams);
 			
 			double metricVal = evaluator.evaluate(batchResults);
 			if (metricVal > maxMetric) {
