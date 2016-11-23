@@ -73,10 +73,11 @@ public class RM1Builder {
 	public FeatureVector buildRelevanceModel(Stopper stopper) {
 		FeatureVector termScores = new FeatureVector(stopper);
 		
-		initialHits.crop(feedbackDocs);
+		int i = 0;
 		Iterator<SearchHit> hitIt = initialHits.iterator();
-		while (hitIt.hasNext()) {
+		while (hitIt.hasNext() && i < feedbackDocs) {
 			SearchHit hit = hitIt.next();
+			i++;
 			
 			// Prep the scorers
 			QueryScorer queryScorer = new QueryLikelihoodQueryScorer(new DirichletDocScorer(hit, collectionStats));
