@@ -22,6 +22,10 @@ public class FileLookupDocScorerCreator extends DocScorerCreator {
 	public FileLookupDocScorerCreator(String basePath) {
 		this.basePath = basePath;
 	}
+	
+	public String getBasePath() {
+		return basePath;
+	}
 
 	@Override
 	protected void createIfNecessary(SearchHit doc) {

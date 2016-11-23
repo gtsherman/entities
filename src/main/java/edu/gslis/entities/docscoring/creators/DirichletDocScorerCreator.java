@@ -19,6 +19,14 @@ public class DirichletDocScorerCreator extends DocScorerCreator {
 		this.mu = mu;
 	}
 	
+	public CollectionStats getCollectionStats() {
+		return collectionStats;
+	}
+	
+	public double getMu() {
+		return mu;
+	}
+	
 	@Override
 	protected void createIfNecessary(SearchHit doc) {
 		if (!storedScorers.containsKey(doc.getDocno())) {

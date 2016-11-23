@@ -21,6 +21,18 @@ public class ExpansionDocsDocScorerCreator extends DocScorerCreator {
 		this(expansionIndex, clusters);
 		this.mu = mu;
 	}
+	
+	public IndexWrapper getIndex() {
+		return expansionIndex;
+	}
+	
+	public RelatedDocs getClusters() {
+		return clusters;
+	}
+	
+	public double getMu() {
+		return mu;
+	}
 
 	@Override
 	protected void createIfNecessary(SearchHit doc) {
