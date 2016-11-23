@@ -9,8 +9,9 @@ import java.util.Iterator;
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.docscoring.DirichletDocScorer;
-import edu.gslis.entities.docscoring.QueryScorer;
 import edu.gslis.entities.docscoring.QueryLikelihoodQueryScorer;
+import edu.gslis.entities.docscoring.QueryScorer;
+import edu.gslis.entities.docscoring.creators.DirichletDocScorerCreator;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
@@ -44,6 +45,8 @@ public class RunBaselineRetrieval {
 		
 		SearchResultsReader results = new SearchResultsReader(new File(config.get("initial-hits")));
 		SearchHitsBatch batchResults = results.getBatchResults();
+		
+		DirichletDocScorerCreator ddsc = new DirichletDocScorerCreator(cs);
 
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("baseline", outputWriter);
@@ -62,7 +65,7 @@ public class RunBaselineRetrieval {
 			while (hitIt.hasNext()) {
 				SearchHit hit = new IndexBackedSearchHit(index, hitIt.next());
 
-				QueryScorer scorer = new QueryLikelihoodQueryScorer(new DirichletDocScorer(hit, cs));
+				QueryScorer scorer = new QueryLikelihoodQueryScorer(ddsc.getDocScorer(hit));
 				double score = scorer.scoreQuery(query);
 				
 				hit.setScore(score);

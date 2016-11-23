@@ -12,8 +12,12 @@ import java.util.Map;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
+import edu.gslis.entities.docscoring.creators.DocScorerCreator;
+import edu.gslis.entities.docscoring.creators.FileLookupDocScorerCreator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
+import edu.gslis.indexes.IndexWrapper;
+import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.searchhits.SearchHits;
@@ -29,6 +33,8 @@ public class RunDoubleEntitySweep {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
 		
+		IndexWrapper index = new IndexWrapperIndriImpl(config.get("index"));
+		
 		Stopper stopper = null;
 		if (config.get("stoplist") != null)
 			stopper = new Stopper(config.get("stoplist"));
@@ -39,12 +45,20 @@ public class RunDoubleEntitySweep {
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 		
+		int numEntities = 10;
+		if (config.get("num-entities") != null) {
+			numEntities = Integer.parseInt(config.get("num-entities"));
+		}
+		if (args.length > 2) {
+			numEntities = Integer.parseInt(args[2]);
+		}
+		
 		int numDocs = 1000;
 		if (config.get("num-docs") != null) {
 			numDocs = Integer.parseInt(config.get("num-docs"));
 		}
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")));
+		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
 		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
 		
 		String entityProbsPath = config.get("for-query-probs");
@@ -53,7 +67,15 @@ public class RunDoubleEntitySweep {
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("doubleEntity", outputWriter);
 		
-		QueryRunner runner = new DoubleEntityRunner(initialHitsBatch, entityProbsPath, stopper);
+		DocScorerCreator docScorerCreator = new FileLookupDocScorerCreator(entityProbsPath + 
+				File.separator + "docProbsNew");
+		DocScorerCreator wikiDocScorerCreator = new FileLookupDocScorerCreator(entityProbsPath + 
+				File.separator + "entityProbsWikiNew." + numEntities);
+		DocScorerCreator selfDocScorerCreator = new FileLookupDocScorerCreator(entityProbsPath + 
+				File.separator + "entityProbsSelfNew." + numEntities);
+
+		QueryRunner runner = new DoubleEntityRunner(initialHitsBatch, stopper,
+				docScorerCreator, selfDocScorerCreator, wikiDocScorerCreator);
 		
 		Map<String, Double> params = new HashMap<String, Double>();
 		

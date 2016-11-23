@@ -6,12 +6,15 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 
+import edu.gslis.entities.docscoring.creators.FileLookupDocScorerCreator;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
 import edu.gslis.evaluation.evaluators.NDCGEvaluator;
 import edu.gslis.evaluation.running.runners.EntityRunner;
 import edu.gslis.evaluation.validators.KFoldValidator;
+import edu.gslis.indexes.IndexWrapper;
+import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
@@ -27,6 +30,8 @@ public class RunEntityValidation {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
 		
+		IndexWrapper index = new IndexWrapperIndriImpl(config.get("index"));
+
 		Stopper stopper = new Stopper(config.get("stoplist"));
 
 		GQueries queries = new GQueriesJsonImpl();
@@ -45,7 +50,7 @@ public class RunEntityValidation {
 			}
 		}
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")));
+		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
 		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
 		
 		long seed = Long.parseLong(args[1]);
@@ -54,10 +59,13 @@ public class RunEntityValidation {
 		if (targetMetric.equalsIgnoreCase("ndcg")) {
 			evaluator = new NDCGEvaluator(qrels);
 		}
+
+		FileLookupDocScorerCreator docScorerCreator = new FileLookupDocScorerCreator(forQueryProbs + 
+				File.separator + "docProbsNew");
+		FileLookupDocScorerCreator expansionDocScorerCreator = new FileLookupDocScorerCreator(forQueryProbs + 
+				File.separator + "entityProbs" + model + "New.10");
 		
-		EntityRunner runner = new EntityRunner(initialHitsBatch, forQueryProbs, stopper);
-		runner.setNumEntities(10);
-		runner.setModel(model);
+		EntityRunner runner = new EntityRunner(initialHitsBatch, stopper, docScorerCreator, expansionDocScorerCreator);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);

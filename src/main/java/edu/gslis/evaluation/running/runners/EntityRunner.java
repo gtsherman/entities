@@ -1,18 +1,17 @@
 package edu.gslis.evaluation.running.runners;
 
-import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 import edu.gslis.entities.docscoring.DocScorer;
-import edu.gslis.entities.docscoring.FileLookupDocScorer;
 import edu.gslis.entities.docscoring.InterpolatedDocScorer;
 import edu.gslis.entities.docscoring.QueryLikelihoodQueryScorer;
 import edu.gslis.entities.docscoring.QueryScorer;
+import edu.gslis.entities.docscoring.creators.DocScorerCreator;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
+import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
@@ -28,16 +27,18 @@ public class EntityRunner implements QueryRunner {
 	public static final String SELF_MODEL = "Self";
 
 	private SearchHitsBatch initialResultsBatch;
-	private String basePath;
 	private Stopper stopper;
+	private DocScorerCreator docScorerCreator;
+	private DocScorerCreator expansionDocScorerCreator;
 
-	private int numEntities = 10;
-	private String model = WIKI_MODEL;
+	private ParameterizedResults processedQueries = new ParameterizedResults();
 	
-	public EntityRunner(SearchHitsBatch initialResultsBatch, String basePath, Stopper stopper) {
+	public EntityRunner(SearchHitsBatch initialResultsBatch, Stopper stopper,
+			DocScorerCreator docScorerCreator, DocScorerCreator expansionDocScorerCreator) {
 		this.initialResultsBatch = initialResultsBatch;
-		this.basePath = basePath;
 		this.stopper = stopper;
+		this.docScorerCreator = docScorerCreator;
+		this.expansionDocScorerCreator = expansionDocScorerCreator;
 	}
 	
 	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator) {
@@ -54,7 +55,7 @@ public class EntityRunner implements QueryRunner {
 			currentParams.put(EntityRunner.EXPANSION_WEIGHT, wikiWeight);
 				
 			System.err.println("\t\tParameters: " + origWeight + " (doc), " + wikiWeight + " (expansion)");
-			SearchHitsBatch batchResults = run(queries, 1000, currentParams);
+			SearchHitsBatch batchResults = run(queries, 100, currentParams);
 			
 			double metricVal = evaluator.evaluate(batchResults);
 			if (metricVal > maxMetric) {
@@ -70,32 +71,39 @@ public class EntityRunner implements QueryRunner {
 		return bestParams;
 	}
 
-	public void setNumEntities(int numEntities) {
-		this.numEntities = numEntities;
-	}
-	
-	public void setModel(String model) {
-		this.model = model;
-	}
-
 	public SearchHitsBatch run(GQueries queries, int numResults, Map<String, Double> params) {
 		SearchHitsBatch batchResults = new SearchHitsBatch();
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
+			SearchHits processedHits = getProcessedQueryResults(query, numResults, params);			
+			batchResults.setSearchHits(query, processedHits);
+		}
+		return batchResults;
+	}
+	
+	private SearchHits getProcessedQueryResults(GQuery query, int numResults, Map<String, Double> params) {
+		double[] paramVals = {params.get(DOCUMENT_WEIGHT), params.get(EXPANSION_WEIGHT), numResults};
+
+		if (!processedQueries.resultsExist(query, paramVals)) {
 			query.applyStopper(stopper);
 			
-			SearchHits initialHits = getInitialHits(query, numResults);
+			SearchHits initialHits = getInitialHits(query);
+			SearchHits processedHits = new SearchHits();
 
+			int i = 0;
 			Iterator<SearchHit> hitIt = initialHits.iterator();
-			while (hitIt.hasNext()) {
+			while (hitIt.hasNext() && i < numResults) {
 				SearchHit doc = hitIt.next();
-
-				DocScorer docScorer = new FileLookupDocScorer(basePath + File.separator + "docProbsNew" +
-						File.separator + query.getTitle() + File.separator + doc.getDocno());
-				DocScorer expansionDocScorer = new FileLookupDocScorer(basePath + File.separator + "entityProbs" +
-						model + "New." + numEntities + File.separator + query.getTitle() + File.separator + doc.getDocno());
+				i++;
 				
+				SearchHit newDoc = new SearchHit();
+				newDoc.setDocno(doc.getDocno());
+				newDoc.setQueryName(query.getTitle());
+
+				DocScorer docScorer = docScorerCreator.getDocScorer(newDoc);
+				DocScorer expansionDocScorer = expansionDocScorerCreator.getDocScorer(newDoc);
+
 				Map<DocScorer, Double> scorerWeights = new HashMap<DocScorer, Double>();
 				scorerWeights.put(docScorer, params.get(DOCUMENT_WEIGHT));
 				scorerWeights.put(expansionDocScorer, params.get(EXPANSION_WEIGHT));
@@ -103,21 +111,20 @@ public class EntityRunner implements QueryRunner {
 				DocScorer interpolatedScorer = new InterpolatedDocScorer(scorerWeights);
 				
 				QueryScorer queryScorer = new QueryLikelihoodQueryScorer(interpolatedScorer);
-			
-				doc.setScore(queryScorer.scoreQuery(query));
+				
+				newDoc.setScore(queryScorer.scoreQuery(query));
+				processedHits.add(newDoc);
 			}
 			
-			initialHits.rank();
-			batchResults.setSearchHits(query.getTitle(), initialHits);
+			processedHits.rank();
+			processedQueries.addResults(processedHits, query, paramVals);
 		}
-		return batchResults;
+		
+		return processedQueries.getResults(query, paramVals);
 	}
 	
-	private SearchHits getInitialHits(GQuery query, int numResults) {
-		SearchHits hits = initialResultsBatch.getSearchHits(query);
-		SearchHits cropped = new SearchHits(new ArrayList<SearchHit>(hits.hits()));
-		cropped.crop(numResults);
-		return cropped;
+	private SearchHits getInitialHits(GQuery query) {
+		return initialResultsBatch.getSearchHits(query);
 	}
-
+	
 }

@@ -8,12 +8,16 @@ import java.util.Iterator;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
+import edu.gslis.entities.docscoring.creators.DocScorerCreator;
+import edu.gslis.entities.docscoring.creators.FileLookupDocScorerCreator;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
 import edu.gslis.evaluation.evaluators.NDCGEvaluator;
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
 import edu.gslis.evaluation.validators.KFoldValidator;
+import edu.gslis.indexes.IndexWrapper;
+import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
@@ -29,10 +33,15 @@ public class RunDoubleEntityValidation {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
 		
+		IndexWrapper index = new IndexWrapperIndriImpl(config.get("index"));
+		
 		Stopper stopper = new Stopper(config.get("stoplist"));
+
 		GQueries queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
+
 		Qrels qrels = new Qrels(config.get("qrels"), false, 1);
+
 		String forQueryProbs = config.get("for-query-probs");
 		String targetMetric = config.get("target-metric");
 		
@@ -49,16 +58,23 @@ public class RunDoubleEntityValidation {
 			evaluator = new NDCGEvaluator(qrels);
 		}
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")));
+		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
 		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
 		
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 		
 		long seed = Long.parseLong(args[1]);
+		
+		DocScorerCreator docScorerCreator = new FileLookupDocScorerCreator(forQueryProbs + 
+				File.separator + "docProbsNew");
+		DocScorerCreator wikiDocScorerCreator = new FileLookupDocScorerCreator(forQueryProbs + 
+				File.separator + "entityProbsWikiNew." + numEntities);
+		DocScorerCreator selfDocScorerCreator = new FileLookupDocScorerCreator(forQueryProbs + 
+				File.separator + "entityProbsSelfNew." + numEntities);
 
-		DoubleEntityRunner runner = new DoubleEntityRunner(initialHitsBatch, forQueryProbs, stopper);
-		runner.setNumEntities(numEntities);
+		DoubleEntityRunner runner = new DoubleEntityRunner(initialHitsBatch, stopper,
+				docScorerCreator, selfDocScorerCreator, wikiDocScorerCreator);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);

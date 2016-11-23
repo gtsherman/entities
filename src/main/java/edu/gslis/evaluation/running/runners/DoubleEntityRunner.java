@@ -1,16 +1,14 @@
 package edu.gslis.evaluation.running.runners;
 
-import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 import edu.gslis.entities.docscoring.DocScorer;
-import edu.gslis.entities.docscoring.FileLookupDocScorer;
 import edu.gslis.entities.docscoring.InterpolatedDocScorer;
 import edu.gslis.entities.docscoring.QueryLikelihoodQueryScorer;
 import edu.gslis.entities.docscoring.QueryScorer;
+import edu.gslis.entities.docscoring.creators.DocScorerCreator;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
@@ -28,17 +26,21 @@ public class DoubleEntityRunner implements QueryRunner {
 	public static final String SELF_WEIGHT = "self";
 
 	private SearchHitsBatch initialResultsBatch;
-	private String basePath;
 	private Stopper stopper;
+	private DocScorerCreator docScorerCreator;
+	private DocScorerCreator selfExpansionScorerCreator;
+	private DocScorerCreator wikiExpansionScorerCreator;
 	
 	private ParameterizedResults processedQueries = new ParameterizedResults();
 	
-	private int numEntities = 10;
-	
-	public DoubleEntityRunner(SearchHitsBatch initialResultsBatch, String basePath, Stopper stopper) {
+	public DoubleEntityRunner(SearchHitsBatch initialResultsBatch, Stopper stopper,
+			DocScorerCreator docScorerCreator, DocScorerCreator selfExpansionScorerCreator,
+			DocScorerCreator wikiExpansionScorerCreator) {
 		this.initialResultsBatch = initialResultsBatch;
-		this.basePath = basePath;
 		this.stopper = stopper;
+		this.docScorerCreator = docScorerCreator;
+		this.selfExpansionScorerCreator = selfExpansionScorerCreator;
+		this.wikiExpansionScorerCreator = wikiExpansionScorerCreator;
 	}
 	
 	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator) {
@@ -75,10 +77,6 @@ public class DoubleEntityRunner implements QueryRunner {
 		return bestParams;
 	}
 
-	public void setNumEntities(int numEntities) {
-		this.numEntities = numEntities;
-	}
-	
 	public SearchHitsBatch run(GQueries queries, int numResults, Map<String, Double> params) {
 		SearchHitsBatch batchResults = new SearchHitsBatch();
 		Iterator<GQuery> queryIt = queries.iterator();
@@ -99,18 +97,22 @@ public class DoubleEntityRunner implements QueryRunner {
 		if (!processedQueries.resultsExist(query, paramVals)) {
 			query.applyStopper(stopper);
 			
-			SearchHits initialHits = getInitialHits(query, numResults);
+			SearchHits initialHits = getInitialHits(query);
+			SearchHits processedHits = new SearchHits();
 
+			int i = 0;
 			Iterator<SearchHit> hitIt = initialHits.iterator();
-			while (hitIt.hasNext()) {
+			while (hitIt.hasNext() && i < numResults) {
 				SearchHit doc = hitIt.next();
+				i++;
+				
+				SearchHit newHit = new SearchHit();
+				newHit.setDocno(doc.getDocno());
+				newHit.setQueryName(query.getTitle());
 
-				DocScorer docScorer = new FileLookupDocScorer(basePath + File.separator + "docProbsNew" +
-						File.separator + query.getTitle() + File.separator + doc.getDocno());
-				DocScorer wikiDocScorer = new FileLookupDocScorer(basePath + File.separator + "entityProbsWikiNew" +
-						"." + numEntities + File.separator + query.getTitle() + File.separator + doc.getDocno());
-				DocScorer selfDocScorer = new FileLookupDocScorer(basePath + File.separator + "entityProbsSelfNew" +
-						"." + numEntities + File.separator + query.getTitle() + File.separator + doc.getDocno());
+				DocScorer docScorer = docScorerCreator.getDocScorer(newHit);
+				DocScorer wikiDocScorer = wikiExpansionScorerCreator.getDocScorer(newHit);
+				DocScorer selfDocScorer = selfExpansionScorerCreator.getDocScorer(newHit);
 				
 				Map<DocScorer, Double> scorerWeights = new HashMap<DocScorer, Double>();
 				scorerWeights.put(docScorer, params.get(DOCUMENT_WEIGHT));
@@ -121,23 +123,19 @@ public class DoubleEntityRunner implements QueryRunner {
 				
 				QueryScorer queryScorer = new QueryLikelihoodQueryScorer(interpolatedScorer);
 			
-				doc.setScore(queryScorer.scoreQuery(query));
+				newHit.setScore(queryScorer.scoreQuery(query));
+				processedHits.add(newHit);
 			}
 			
-			initialHits.rank();
+			processedHits.rank();
 			processedQueries.addResults(initialHits, query, paramVals);
 		}
 
 		return processedQueries.getResults(query, paramVals);
 	}
 	
-	private SearchHits getInitialHits(GQuery query, int numResults) {
-		SearchHits hits = initialResultsBatch.getSearchHits(query);
-		SearchHits cropped = new SearchHits(new ArrayList<SearchHit>(hits.hits()));
-		if (numResults < hits.size()) {
-			cropped.crop(numResults);
-		}
-		return cropped;
+	private SearchHits getInitialHits(GQuery query) {
+		return initialResultsBatch.getSearchHits(query);
 	}
 
 }

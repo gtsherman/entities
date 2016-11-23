@@ -10,9 +10,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import edu.gslis.docscoring.support.CollectionStats;
-import edu.gslis.docscoring.support.IndexBackedCollectionStats;
+import edu.gslis.entities.docscoring.creators.FileLookupDocScorerCreator;
 import edu.gslis.evaluation.running.runners.EntityRunner;
+import edu.gslis.indexes.IndexWrapper;
+import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.searchhits.SearchHits;
@@ -28,6 +29,8 @@ public class RunEntitySweep {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
 		
+		IndexWrapper index = new IndexWrapperIndriImpl(config.get("index"));
+		
 		Stopper stopper = null;
 		if (config.get("stoplist") != null)
 			stopper = new Stopper(config.get("stoplist"));
@@ -35,15 +38,12 @@ public class RunEntitySweep {
 		GQueriesJsonImpl queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
 		
-		CollectionStats cs = new IndexBackedCollectionStats();
-		cs.setStatSource(config.get("index"));
-		
 		int numDocs = 1000;
 		if (config.get("num-docs") != null) {
 			numDocs = Integer.parseInt(config.get("num-docs"));
 		}
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")));
+		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
 		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
 		
 		String entityProbsPath = config.get("for-query-probs");
@@ -53,10 +53,13 @@ public class RunEntitySweep {
 
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("singleEntity", outputWriter);
+
+		FileLookupDocScorerCreator docScorerCreator = new FileLookupDocScorerCreator(entityProbsPath + 
+				File.separator + "docProbsNew");
+		FileLookupDocScorerCreator expansionDocScorerCreator = new FileLookupDocScorerCreator(entityProbsPath + 
+				File.separator + "entityProbs" + entityModel + "New.10");
 		
-		EntityRunner runner = new EntityRunner(initialHitsBatch, entityProbsPath, stopper);
-		runner.setNumEntities(10);
-		runner.setModel(entityModel);
+		EntityRunner runner = new EntityRunner(initialHitsBatch, stopper, docScorerCreator, expansionDocScorerCreator);
 		
 		Map<String, Double> params = new HashMap<String, Double>();
 		
