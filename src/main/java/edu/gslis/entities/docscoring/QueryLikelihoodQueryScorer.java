@@ -24,6 +24,9 @@ public class QueryLikelihoodQueryScorer implements QueryScorer {
 		while (termIt.hasNext()) {
 			String term = termIt.next();
 			double termProb = termScorer.scoreTerm(term);
+			if (termProb == 0) {
+				continue;
+			}
 			double qWeight = query.getFeatureVector().getFeatureWeight(term) / query.getFeatureVector().getLength();
 			loglikelihood += qWeight * Math.log(termProb);
 		}
