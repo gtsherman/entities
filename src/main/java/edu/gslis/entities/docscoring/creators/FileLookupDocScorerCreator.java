@@ -33,11 +33,17 @@ public class FileLookupDocScorerCreator extends DocScorerCreator {
 			doc.setQueryName("");
 		}
 
-		if (!storedScorers.containsKey(doc.getQueryName() + File.separator + doc.getDocno())) {
+		String docKey = docKey(doc);
+		if (!storedScorers.containsKey(docKey)) {
 			DocScorer docScorer = new FileLookupDocScorer(basePath + File.separator +
 					doc.getQueryName() + File.separator + doc.getDocno());
-			storedScorers.put(doc.getDocno(), new StoredDocScorer(docScorer));
+			storedScorers.put(docKey, new StoredDocScorer(docScorer));
 		}
+	}
+	
+	@Override
+	protected String docKey(SearchHit doc) {
+		return doc.getQueryName() + File.separator + doc.getDocno();
 	}
 
 }

@@ -36,15 +36,21 @@ public class ExpansionDocsDocScorerCreator extends DocScorerCreator {
 
 	@Override
 	protected void createIfNecessary(SearchHit doc) {
-		if (!storedScorers.containsKey(doc.getDocno())) {
+		String docKey = docKey(doc);
+		if (!storedScorers.containsKey(docKey)) {
 			ExpansionDocsDocScorer docScorer;
 			if (mu > -1) {
 				docScorer = new ExpansionDocsDocScorer(mu, doc, expansionIndex, clusters);
 			} else {
 				docScorer = new ExpansionDocsDocScorer(doc, expansionIndex, clusters);
 			}
-			storedScorers.put(doc.getDocno(), new StoredDocScorer(docScorer));
+			storedScorers.put(docKey, new StoredDocScorer(docScorer));
 		}
+	}
+	
+	@Override
+	protected String docKey(SearchHit doc) {
+		return doc.getDocno() + mu;
 	}
 
 }

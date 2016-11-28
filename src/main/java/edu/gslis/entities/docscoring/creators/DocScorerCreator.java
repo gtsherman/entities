@@ -22,9 +22,20 @@ public abstract class DocScorerCreator {
 	
 	public DocScorer getDocScorer(SearchHit doc) {
 		createIfNecessary(doc);
-		return storedScorers.get(doc.getDocno());
+		return storedScorers.get(docKey(doc));
 	}
 	
+	/**
+	 * Creates a DocScorer for the given document if one does not exist.
+	 * @param doc The document that needs to be scored.
+	 */
 	protected abstract void createIfNecessary(SearchHit doc);
+
+	/**
+	 * Returns a unique key based on the document and any parameters.
+	 * @param doc The document that needs to be scored.
+	 * @return A String uniquely representing the document and any parameters.
+	 */
+	protected abstract String docKey(SearchHit doc);
 
 }

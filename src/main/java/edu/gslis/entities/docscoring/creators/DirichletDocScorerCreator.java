@@ -29,13 +29,19 @@ public class DirichletDocScorerCreator extends DocScorerCreator {
 	
 	@Override
 	protected void createIfNecessary(SearchHit doc) {
-		if (!storedScorers.containsKey(doc.getDocno())) {
+		String docKey = docKey(doc);
+		if (!storedScorers.containsKey(docKey)) {
 			DirichletDocScorer docScorer = new DirichletDocScorer(doc, collectionStats);
 			if (mu > -1) {
 				docScorer.setMu(mu);
 			}
-			storedScorers.put(doc.getDocno(), new StoredDocScorer(docScorer));
+			storedScorers.put(docKey, new StoredDocScorer(docScorer));
 		}
+	}
+	
+	@Override
+	protected String docKey(SearchHit doc) {
+		return doc.getDocno() + mu;
 	}
 
 }
