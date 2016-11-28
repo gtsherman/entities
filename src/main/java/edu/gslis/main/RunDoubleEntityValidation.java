@@ -6,8 +6,6 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 
-import edu.gslis.docscoring.support.CollectionStats;
-import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.docscoring.creators.DocScorerCreator;
 import edu.gslis.entities.docscoring.creators.FileLookupDocScorerCreator;
 import edu.gslis.eval.Qrels;
@@ -60,9 +58,6 @@ public class RunDoubleEntityValidation {
 		
 		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
 		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
-		
-		CollectionStats cs = new IndexBackedCollectionStats();
-		cs.setStatSource(config.get("index"));
 		
 		long seed = Long.parseLong(args[1]);
 		

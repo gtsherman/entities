@@ -51,16 +51,16 @@ public class DoubleEntityRunner implements QueryRunner {
 
 		for (int origW = 0; origW <= 10; origW++) {
 			double origWeight = origW / 10.0;
-			currentParams.put(DoubleEntityRunner.DOCUMENT_WEIGHT, origWeight);
+			currentParams.put(DOCUMENT_WEIGHT, origWeight);
 			for (int wikiW = 0; wikiW <= 10-origW; wikiW++) {
 				double wikiWeight = wikiW / 10.0;
 				double selfWeight = (10-(origW+wikiW)) / 10.0;
 				
-				currentParams.put(DoubleEntityRunner.WIKI_WEIGHT, wikiWeight);
-				currentParams.put(DoubleEntityRunner.SELF_WEIGHT, selfWeight);
+				currentParams.put(WIKI_WEIGHT, wikiWeight);
+				currentParams.put(SELF_WEIGHT, selfWeight);
 
 				System.err.println("\t\tParameters: " + origWeight + " (doc), " + wikiWeight + " (wiki), " + selfWeight + " (self)");
-				SearchHitsBatch batchResults = run(queries, 1000, currentParams);
+				SearchHitsBatch batchResults = run(queries, 100, currentParams);
 				
 				double metricVal = evaluator.evaluate(batchResults);
 				if (metricVal > maxMetric) {
@@ -128,7 +128,7 @@ public class DoubleEntityRunner implements QueryRunner {
 			}
 			
 			processedHits.rank();
-			processedQueries.addResults(initialHits, query, paramVals);
+			processedQueries.addResults(processedHits, query, paramVals);
 		}
 
 		return processedQueries.getResults(query, paramVals);
