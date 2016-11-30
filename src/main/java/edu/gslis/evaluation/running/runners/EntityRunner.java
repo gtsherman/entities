@@ -4,16 +4,16 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import edu.gslis.entities.docscoring.DocScorer;
-import edu.gslis.entities.docscoring.InterpolatedDocScorer;
-import edu.gslis.entities.docscoring.QueryLikelihoodQueryScorer;
-import edu.gslis.entities.docscoring.QueryScorer;
-import edu.gslis.entities.docscoring.creators.DocScorerCreator;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
+import edu.gslis.scoring.DocScorer;
+import edu.gslis.scoring.InterpolatedDocScorer;
+import edu.gslis.scoring.creators.DocScorerCreator;
+import edu.gslis.scoring.queryscoring.QueryLikelihoodQueryScorer;
+import edu.gslis.scoring.queryscoring.QueryScorer;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
@@ -41,6 +41,7 @@ public class EntityRunner implements QueryRunner {
 		this.expansionDocScorerCreator = expansionDocScorerCreator;
 	}
 	
+	@Override
 	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator) {
 		double maxMetric = 0.0;
 
@@ -71,6 +72,7 @@ public class EntityRunner implements QueryRunner {
 		return bestParams;
 	}
 
+	@Override
 	public SearchHitsBatch run(GQueries queries, int numResults, Map<String, Double> params) {
 		SearchHitsBatch batchResults = new SearchHitsBatch();
 		Iterator<GQuery> queryIt = queries.iterator();

@@ -3,6 +3,8 @@ package edu.gslis.entities.docscoring;
 import java.util.HashMap;
 import java.util.Map;
 
+import edu.gslis.scoring.DocScorer;
+import edu.gslis.scoring.DocScorerWithDocumentPrior;
 import edu.gslis.searchhits.SearchHit;
 
 /**

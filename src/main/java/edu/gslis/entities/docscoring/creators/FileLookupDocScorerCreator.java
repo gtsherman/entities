@@ -2,9 +2,10 @@ package edu.gslis.entities.docscoring.creators;
 
 import java.io.File;
 
-import edu.gslis.entities.docscoring.DocScorer;
 import edu.gslis.entities.docscoring.FileLookupDocScorer;
-import edu.gslis.entities.docscoring.StoredDocScorer;
+import edu.gslis.scoring.DocScorer;
+import edu.gslis.scoring.StoredDocScorer;
+import edu.gslis.scoring.creators.DocScorerCreator;
 import edu.gslis.searchhits.SearchHit;
 
 /**

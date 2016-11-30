@@ -9,7 +9,6 @@ import java.util.Iterator;
 import java.util.Set;
 
 import edu.gslis.docscoring.support.PrefetchedCollectionStats;
-import edu.gslis.entities.docscoring.creators.DirichletDocScorerCreator;
 import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
@@ -23,6 +22,7 @@ import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.related_docs.DocumentClusterReader;
+import edu.gslis.scoring.creators.DirichletDocScorerCreator;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;

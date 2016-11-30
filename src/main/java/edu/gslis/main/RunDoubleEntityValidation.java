@@ -6,7 +6,6 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 
-import edu.gslis.entities.docscoring.creators.DocScorerCreator;
 import edu.gslis.entities.docscoring.creators.FileLookupDocScorerCreator;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
@@ -19,6 +18,7 @@ import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
+import edu.gslis.scoring.creators.DocScorerCreator;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;

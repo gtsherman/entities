@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.Map;
 
 import edu.gslis.readers.QueryProbabilityReader;
+import edu.gslis.scoring.DocScorer;
 
 public class FileLookupDocScorer implements DocScorer {
 	

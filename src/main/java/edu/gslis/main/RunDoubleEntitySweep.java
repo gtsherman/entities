@@ -12,7 +12,6 @@ import java.util.Map;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
-import edu.gslis.entities.docscoring.creators.DocScorerCreator;
 import edu.gslis.entities.docscoring.creators.FileLookupDocScorerCreator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
@@ -20,6 +19,7 @@ import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
+import edu.gslis.scoring.creators.DocScorerCreator;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;

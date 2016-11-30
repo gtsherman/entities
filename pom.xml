@@ -88,6 +88,11 @@
     </dependency>
     <dependency>
     	<groupId>edu.gslis</groupId>
+    	<artifactId>scoring</artifactId>
+    	<version>0.0.1-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+    	<groupId>edu.gslis</groupId>
     	<artifactId>cross-validation</artifactId>
     	<version>0.0.1-SNAPSHOT</version>
     </dependency>

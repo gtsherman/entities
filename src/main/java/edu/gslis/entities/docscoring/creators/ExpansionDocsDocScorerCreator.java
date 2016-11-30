@@ -1,9 +1,10 @@
 package edu.gslis.entities.docscoring.creators;
 
 import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
-import edu.gslis.entities.docscoring.StoredDocScorer;
 import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.related_docs.RelatedDocs;
+import edu.gslis.scoring.StoredDocScorer;
+import edu.gslis.scoring.creators.DocScorerCreator;
 import edu.gslis.searchhits.SearchHit;
 
 public class ExpansionDocsDocScorerCreator extends DocScorerCreator {

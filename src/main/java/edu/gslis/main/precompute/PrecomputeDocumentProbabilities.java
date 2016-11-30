@@ -7,11 +7,11 @@ import java.util.Iterator;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
-import edu.gslis.entities.docscoring.DirichletDocScorer;
-import edu.gslis.entities.docscoring.DocScorer;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
+import edu.gslis.scoring.DirichletDocScorer;
+import edu.gslis.scoring.DocScorer;
 import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;

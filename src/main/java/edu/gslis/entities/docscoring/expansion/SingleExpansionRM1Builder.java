@@ -1,20 +1,19 @@
 package edu.gslis.entities.docscoring.expansion;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 
-import edu.gslis.entities.docscoring.DocScorer;
-import edu.gslis.entities.docscoring.InterpolatedDocScorer;
-import edu.gslis.entities.docscoring.QueryLikelihoodQueryScorer;
-import edu.gslis.entities.docscoring.QueryScorer;
-import edu.gslis.entities.docscoring.creators.DirichletDocScorerCreator;
 import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
 import edu.gslis.evaluation.running.runners.EntityRunner;
 import edu.gslis.queries.GQuery;
+import edu.gslis.scoring.DocScorer;
+import edu.gslis.scoring.InterpolatedDocScorer;
+import edu.gslis.scoring.creators.DirichletDocScorerCreator;
+import edu.gslis.scoring.expansion.RelevanceModelScorer;
+import edu.gslis.scoring.queryscoring.QueryLikelihoodQueryScorer;
+import edu.gslis.scoring.queryscoring.QueryScorer;
 import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;

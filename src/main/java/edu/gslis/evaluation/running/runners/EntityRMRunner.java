@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import edu.gslis.entities.docscoring.creators.DirichletDocScorerCreator;
 import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
 import edu.gslis.entities.docscoring.expansion.SingleExpansionRM1Builder;
 import edu.gslis.entities.docscoring.expansion.SingleExpansionRM3Builder;
@@ -14,6 +13,7 @@ import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
 import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
+import edu.gslis.scoring.creators.DirichletDocScorerCreator;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
@@ -40,6 +40,7 @@ public class EntityRMRunner implements QueryRunner {
 		this.wikiExpansionScorerCreator = wikiExpansionScorerCreator;
 	}
 
+	@Override
 	public Map<String, Double> sweep(GQueries queries, Evaluator evaluator) {
 		double maxMetric = 0.0;
 
@@ -98,6 +99,7 @@ public class EntityRMRunner implements QueryRunner {
 		return bestParams;
 	}
 
+	@Override
 	public SearchHitsBatch run(GQueries queries, int numResults, Map<String, Double> params) {
 		SearchHitsBatch batchResults = new SearchHitsBatch();
 		

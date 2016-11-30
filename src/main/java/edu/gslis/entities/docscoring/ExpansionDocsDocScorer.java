@@ -5,6 +5,8 @@ import java.util.Map;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.related_docs.RelatedDocs;
+import edu.gslis.scoring.DirichletDocScorer;
+import edu.gslis.scoring.DocScorer;
 import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
 

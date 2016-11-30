@@ -8,13 +8,13 @@ import java.util.Iterator;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
-import edu.gslis.entities.docscoring.QueryLikelihoodQueryScorer;
-import edu.gslis.entities.docscoring.QueryScorer;
-import edu.gslis.entities.docscoring.creators.DirichletDocScorerCreator;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
+import edu.gslis.scoring.creators.DirichletDocScorerCreator;
+import edu.gslis.scoring.queryscoring.QueryLikelihoodQueryScorer;
+import edu.gslis.scoring.queryscoring.QueryScorer;
 import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
