@@ -6,8 +6,8 @@ import java.util.Map;
 
 import edu.gslis.entities.docscoring.creators.DirichletDocScorerCreator;
 import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
-import edu.gslis.entities.docscoring.expansion.MultiExpansionRM1Builder;
-import edu.gslis.entities.docscoring.expansion.MultiExpansionRM3Builder;
+import edu.gslis.entities.docscoring.expansion.SingleExpansionRM1Builder;
+import edu.gslis.entities.docscoring.expansion.SingleExpansionRM3Builder;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
@@ -19,7 +19,7 @@ import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
-public class DoubleEntityRMRunner implements QueryRunner {
+public class EntityRMRunner implements QueryRunner {
 	
 	private final int trainingNumResults = 100;
 	
@@ -27,19 +27,16 @@ public class DoubleEntityRMRunner implements QueryRunner {
 	private SearchHitsBatch initialResultsBatch;
 	private Stopper stopper;
 	private DirichletDocScorerCreator docScorerCreator;
-	private ExpansionDocsDocScorerCreator selfExpansionScorerCreator;
 	private ExpansionDocsDocScorerCreator wikiExpansionScorerCreator;
 		
 	private ParameterizedResults processedQueries = new ParameterizedResults();
 	
-	public DoubleEntityRMRunner(IndexWrapper targetIndex, SearchHitsBatch initialResultsBatch, Stopper stopper,
-			DirichletDocScorerCreator docScorerCreator, ExpansionDocsDocScorerCreator selfExpansionScorerCreator,
-			ExpansionDocsDocScorerCreator wikiExpansionScorerCreator) {
+	public EntityRMRunner(IndexWrapper targetIndex, SearchHitsBatch initialResultsBatch, Stopper stopper,
+			DirichletDocScorerCreator docScorerCreator, ExpansionDocsDocScorerCreator wikiExpansionScorerCreator) {
 		this.targetIndex = targetIndex;
 		this.initialResultsBatch = initialResultsBatch;
 		this.stopper = stopper;
 		this.docScorerCreator = docScorerCreator;
-		this.selfExpansionScorerCreator = selfExpansionScorerCreator;
 		this.wikiExpansionScorerCreator = wikiExpansionScorerCreator;
 	}
 
@@ -51,49 +48,45 @@ public class DoubleEntityRMRunner implements QueryRunner {
 
 		for (int origW = 0; origW <= 10; origW++) {
 			double origWeight = origW / 10.0;
-			currentParams.put(DoubleEntityRunner.DOCUMENT_WEIGHT, origWeight);
-			for (int wikiW = 0; wikiW <= 10-origW; wikiW++) {
-				double wikiWeight = wikiW / 10.0;
-				double selfWeight = (10-(origW+wikiW)) / 10.0;
+			currentParams.put(EntityRunner.DOCUMENT_WEIGHT, origWeight);
+
+			double wikiWeight = (10 - origW) / 10.0;
+			currentParams.put(EntityRunner.EXPANSION_WEIGHT, wikiWeight);
 				
-				currentParams.put(DoubleEntityRunner.WIKI_WEIGHT, wikiWeight);
-				currentParams.put(DoubleEntityRunner.SELF_WEIGHT, selfWeight);
+			for (int lambda = 0; lambda <= 10; lambda += 1) {
+				double lam = lambda / 10.0;
+				currentParams.put(RMRunner.ORIG_QUERY_WEIGHT, lam);
+
+				System.err.println("\t\tParameters: "+origWeight+" (doc), "+wikiWeight+" (wiki), "+lam+" (mixing)");
+				SearchHitsBatch batchResults = run(queries, trainingNumResults, currentParams);
+
+				//double metricVal = evaluator.evaluate(batchResults);
+				double metricVal = 0.0;
 				
-				for (int lambda = 0; lambda <= 10; lambda += 1) {
-					double lam = lambda / 10.0;
-					currentParams.put(RMRunner.ORIG_QUERY_WEIGHT, lam);
+				Iterator<String> queryIt = batchResults.queryIterator();
+				while (queryIt.hasNext()) {
+					String query = queryIt.next();
+					GQuery gquery = new GQuery();
+					gquery.setTitle(query);
 
-					System.err.println("\t\tParameters: "+origWeight+" (doc), "+wikiWeight+" (wiki), "+selfWeight+" (self), "+lam+" (mixing)");
-					SearchHitsBatch batchResults = run(queries, trainingNumResults, currentParams);
+					if (processedQueries.scoreExists(gquery, getParamVals(currentParams, trainingNumResults))) {
+						metricVal += processedQueries.getScore(gquery, getParamVals(currentParams, trainingNumResults));
+					} else {
+						SearchHitsBatch q = new SearchHitsBatch();
+						q.setSearchHits(gquery, batchResults.getSearchHits(query));
 
-					//double metricVal = evaluator.evaluate(batchResults);
-					double metricVal = 0.0;
-					
-					Iterator<String> queryIt = batchResults.queryIterator();
-					while (queryIt.hasNext()) {
-						String query = queryIt.next();
-						GQuery gquery = new GQuery();
-						gquery.setTitle(query);
+						double score = evaluator.evaluate(q);
+						processedQueries.setScore(score, gquery, getParamVals(currentParams, trainingNumResults));
 
-						if (processedQueries.scoreExists(gquery, getParamVals(currentParams, trainingNumResults))) {
-							metricVal += processedQueries.getScore(gquery, getParamVals(currentParams, trainingNumResults));
-						} else {
-							SearchHitsBatch q = new SearchHitsBatch();
-							q.setSearchHits(gquery, batchResults.getSearchHits(query));
-
-							double score = evaluator.evaluate(q);
-							processedQueries.setScore(score, gquery, getParamVals(currentParams, trainingNumResults));
-
-							metricVal += score;
-						}
+						metricVal += score;
 					}
-					metricVal /= batchResults.getNumQueries();
-					
-					System.err.println("\t\tScore: "+metricVal);
-					if (metricVal > maxMetric) {
-						maxMetric = metricVal;
-						bestParams.putAll(currentParams);
-					}
+				}
+				metricVal /= batchResults.getNumQueries();
+				
+				System.err.println("\t\tScore: "+metricVal);
+				if (metricVal > maxMetric) {
+					maxMetric = metricVal;
+					bestParams.putAll(currentParams);
 				}
 			}
 		}
@@ -136,10 +129,9 @@ public class DoubleEntityRMRunner implements QueryRunner {
 			SearchHits initialHits = getInitialHits(query);
 			
 			// Setup RM1 and RM3 builders
-			MultiExpansionRM1Builder rm1Builder = new MultiExpansionRM1Builder(query, initialHits,
-					docScorerCreator, selfExpansionScorerCreator, wikiExpansionScorerCreator,
-					fbDocs, fbTerms);
-			MultiExpansionRM3Builder rm3Builder = new MultiExpansionRM3Builder(query, rm1Builder);
+			SingleExpansionRM1Builder rm1Builder = new SingleExpansionRM1Builder(query, initialHits,
+					docScorerCreator, wikiExpansionScorerCreator, fbDocs, fbTerms);
+			SingleExpansionRM3Builder rm3Builder = new SingleExpansionRM3Builder(query, rm1Builder);
 			
 			// Build the RM3 and convert to query
 			FeatureVector rm3Vector = rm3Builder.buildRelevanceModel(stopper, params);
@@ -158,9 +150,8 @@ public class DoubleEntityRMRunner implements QueryRunner {
 	}
 	
 	private double[] getParamVals(Map<String, Double> params, int numResults) {
-		double[] paramsVals = {params.get(DoubleEntityRunner.DOCUMENT_WEIGHT),
-			params.get(DoubleEntityRunner.SELF_WEIGHT),
-			params.get(DoubleEntityRunner.WIKI_WEIGHT),
+		double[] paramsVals = {params.get(EntityRunner.DOCUMENT_WEIGHT),
+			params.get(EntityRunner.EXPANSION_WEIGHT),
 			params.get(RMRunner.ORIG_QUERY_WEIGHT),
 			numResults};
 		return paramsVals;

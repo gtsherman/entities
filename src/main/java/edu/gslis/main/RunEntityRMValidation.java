@@ -15,7 +15,7 @@ import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
 import edu.gslis.evaluation.evaluators.NDCGEvaluator;
-import edu.gslis.evaluation.running.runners.DoubleEntityRMRunner;
+import edu.gslis.evaluation.running.runners.EntityRMRunner;
 import edu.gslis.evaluation.validators.KFoldValidator;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
@@ -29,7 +29,7 @@ import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
 import edu.gslis.utils.readers.SearchResultsReader;
 
-public class RunDoubleEntityRMValidation {
+public class RunEntityRMValidation {
 	
 	public static void main(String[] args) throws InterruptedException {
 		Configuration config = new SimpleConfiguration();
@@ -37,14 +37,17 @@ public class RunDoubleEntityRMValidation {
 		
 		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
 		IndexWrapperIndriImpl wikiIndex = new IndexWrapperIndriImpl(config.get("wiki-index"));
+
 		Stopper stopper = new Stopper(config.get("stoplist"));
+
 		GQueries queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
+
 		Qrels qrels = new Qrels(config.get("qrels"), false, 1);
+
 		String targetMetric = config.get("target-metric");
 		
-		DocumentClusterReader selfClusters = new DocumentClusterReader(new File(config.get("document-entities-file-self")));
-		DocumentClusterReader wikiClusters = new DocumentClusterReader(new File(config.get("document-entities-file-wiki")));
+		DocumentClusterReader expansionClusters = new DocumentClusterReader(new File(config.get("document-entities-file")));
 
 		Set<String> terms = new HashSet<String>();
 		Iterator<GQuery> queryIt = queries.iterator();
@@ -55,7 +58,7 @@ public class RunDoubleEntityRMValidation {
 				terms.add(featureIt.next());
 			}
 		}
-		PrefetchedCollectionStats csSelf = new PrefetchedCollectionStats(config.get("index"), terms);
+		PrefetchedCollectionStats cs = new PrefetchedCollectionStats(config.get("index"), terms);
 
 		Evaluator evaluator = new MAPEvaluator(qrels);
 		if (targetMetric.equalsIgnoreCase("ndcg")) {
@@ -67,12 +70,10 @@ public class RunDoubleEntityRMValidation {
 
 		long seed = Long.parseLong(args[1]);
 		
-		DirichletDocScorerCreator docScorerCreator = new DirichletDocScorerCreator(csSelf);
-		ExpansionDocsDocScorerCreator selfScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, selfClusters.getClusters());
-		ExpansionDocsDocScorerCreator wikiScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, wikiClusters.getClusters());
+		DirichletDocScorerCreator docScorerCreator = new DirichletDocScorerCreator(cs);
+		ExpansionDocsDocScorerCreator expansionScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, expansionClusters.getClusters());
 
-		DoubleEntityRMRunner runner = new DoubleEntityRMRunner(index, initialHitsBatch, stopper,
-				docScorerCreator, selfScorerCreator, wikiScorerCreator);
+		EntityRMRunner runner = new EntityRMRunner(index, initialHitsBatch, stopper, docScorerCreator, expansionScorerCreator);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);

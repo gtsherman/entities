@@ -8,7 +8,6 @@ import java.util.Iterator;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
-import edu.gslis.entities.docscoring.DirichletDocScorer;
 import edu.gslis.entities.docscoring.QueryLikelihoodQueryScorer;
 import edu.gslis.entities.docscoring.QueryScorer;
 import edu.gslis.entities.docscoring.creators.DirichletDocScorerCreator;
