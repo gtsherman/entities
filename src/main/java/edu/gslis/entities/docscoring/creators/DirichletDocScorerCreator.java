@@ -7,8 +7,10 @@ import edu.gslis.searchhits.SearchHit;
 
 public class DirichletDocScorerCreator extends DocScorerCreator {
 	
+	public static final double DEFAULT_MU = -1;
+	
 	private CollectionStats collectionStats;
-	private double mu = -1;
+	private double mu = DEFAULT_MU;
 	
 	public DirichletDocScorerCreator(CollectionStats collectionStats) {
 		this.collectionStats = collectionStats;
@@ -16,7 +18,7 @@ public class DirichletDocScorerCreator extends DocScorerCreator {
 	
 	public DirichletDocScorerCreator(double mu, CollectionStats collectionStats) {
 		this(collectionStats);
-		this.mu = mu;
+		setMu(mu);
 	}
 	
 	public CollectionStats getCollectionStats() {
@@ -27,12 +29,16 @@ public class DirichletDocScorerCreator extends DocScorerCreator {
 		return mu;
 	}
 	
+	public void setMu(double mu) {
+		this.mu = mu;
+	}
+	
 	@Override
 	protected void createIfNecessary(SearchHit doc) {
 		String docKey = docKey(doc);
 		if (!storedScorers.containsKey(docKey)) {
 			DirichletDocScorer docScorer = new DirichletDocScorer(doc, collectionStats);
-			if (mu > -1) {
+			if (mu != DEFAULT_MU) {
 				docScorer.setMu(mu);
 			}
 			storedScorers.put(docKey, new StoredDocScorer(docScorer));

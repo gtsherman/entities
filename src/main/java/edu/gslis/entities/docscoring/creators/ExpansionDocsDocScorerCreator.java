@@ -8,9 +8,11 @@ import edu.gslis.searchhits.SearchHit;
 
 public class ExpansionDocsDocScorerCreator extends DocScorerCreator {
 	
+	public static final double DEFAULT_MU = -1;
+	
 	private IndexWrapper expansionIndex;
 	private RelatedDocs clusters;
-	private double mu = -1;
+	private double mu = DEFAULT_MU;
 	
 	public ExpansionDocsDocScorerCreator(IndexWrapper expansionIndex, RelatedDocs clusters) {
 		this.expansionIndex = expansionIndex;
@@ -19,7 +21,7 @@ public class ExpansionDocsDocScorerCreator extends DocScorerCreator {
 	
 	public ExpansionDocsDocScorerCreator(double mu, IndexWrapper expansionIndex, RelatedDocs clusters) {
 		this(expansionIndex, clusters);
-		this.mu = mu;
+		setMu(mu);
 	}
 	
 	public IndexWrapper getIndex() {
@@ -33,13 +35,17 @@ public class ExpansionDocsDocScorerCreator extends DocScorerCreator {
 	public double getMu() {
 		return mu;
 	}
+	
+	public void setMu(double mu) {
+		this.mu = mu;
+	}
 
 	@Override
 	protected void createIfNecessary(SearchHit doc) {
 		String docKey = docKey(doc);
 		if (!storedScorers.containsKey(docKey)) {
 			ExpansionDocsDocScorer docScorer;
-			if (mu > -1) {
+			if (mu != DEFAULT_MU) {
 				docScorer = new ExpansionDocsDocScorer(mu, doc, expansionIndex, clusters);
 			} else {
 				docScorer = new ExpansionDocsDocScorer(doc, expansionIndex, clusters);
