@@ -18,7 +18,7 @@ public class RelatedDocs {
 	
 	/**
 	 * @param doc Original doc. Must have docno field set.
-	 * @return <docno, score> map for all docs related to the original doc, or null if none exist.
+	 * @return Docno-to-score map for all docs related to the original doc, or null if none exist.
 	 */
 	public Map<String, Double> getDocsRelatedTo(SearchHit doc) {
 		return getDocsRelatedTo(doc.getDocno());
