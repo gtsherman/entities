@@ -5,33 +5,39 @@ import java.util.Map;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.related_docs.RelatedDocs;
-import edu.gslis.scoring.DirichletDocScorer;
 import edu.gslis.scoring.DocScorer;
+import edu.gslis.scoring.creators.DirichletDocScorerCreator;
 import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
 
 /**
  * Handles the sum over expansion docs, i.e. Sum_e P(q|e)P(e|D)
- * @author garrick
+ * @author Garrick
  *
  */
 public class ExpansionDocsDocScorer implements DocScorer {
 	
-	protected double mu = 2500;
+	public static final double DEFAULT_MU = 2500;
 	
 	private SearchHit doc;
 	private IndexWrapper expansionIndex;
 	private RelatedDocs clusters;
 	
+	private DirichletDocScorerCreator scorerCreator;
+	
 	public ExpansionDocsDocScorer(SearchHit origDoc, IndexWrapper expansionIndex, RelatedDocs clusters) {
-		setDoc(origDoc);
-		this.expansionIndex = expansionIndex;
-		this.clusters = clusters;
+		this(DEFAULT_MU, origDoc, expansionIndex, clusters);
 	}
 	
 	public ExpansionDocsDocScorer(double mu, SearchHit origDoc, IndexWrapper expansionIndex, RelatedDocs clusters) {
-		this(origDoc, expansionIndex, clusters);
-		this.mu = mu;
+		setDoc(origDoc);
+		this.expansionIndex = expansionIndex;
+		this.clusters = clusters;
+		
+		IndexBackedCollectionStats colStats = new IndexBackedCollectionStats();
+		colStats.setStatSource(expansionIndex);
+
+		scorerCreator = new DirichletDocScorerCreator(mu, colStats);
 	}
 
 	public void setDoc(SearchHit doc) {
@@ -48,14 +54,11 @@ public class ExpansionDocsDocScorer implements DocScorer {
 			return total;
 		}
 
-		IndexBackedCollectionStats colStats = new IndexBackedCollectionStats();
-		colStats.setStatSource(expansionIndex);
-
 		for (String docno : relatedDocs.keySet()) {
 			SearchHit expDoc = new IndexBackedSearchHit(expansionIndex);
 			expDoc.setDocno(docno);
 
-			DocScorer expScorer = new DocScorerWithExpansionPrior(expDoc, new DirichletDocScorer(mu, expDoc, colStats), relatedDocs);
+			DocScorer expScorer = new DocScorerWithExpansionPrior(expDoc, scorerCreator.getDocScorer(expDoc), relatedDocs);
 			total += expScorer.scoreTerm(term);
 		}
 		

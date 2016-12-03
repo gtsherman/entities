@@ -14,7 +14,6 @@ import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.scoring.expansion.RM1Builder;
 import edu.gslis.scoring.expansion.RM3Builder;
-import edu.gslis.searchhits.IndexBackedSearchHits;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
@@ -46,7 +45,7 @@ public class RunBaselineRelevanceModel {
 			numDocs = Integer.parseInt(config.get("num-docs"));
 		}
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")));
+		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
 		SearchHitsBatch batchResults = resultsReader.getBatchResults();
 		
 		int fbDocs = 20;
@@ -68,18 +67,20 @@ public class RunBaselineRelevanceModel {
  		}
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
-		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
+		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("rm3", outputWriter);
 		
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {
 			GQuery query = queryIt.next();
 			query.applyStopper(stopper);
 
-			SearchHits hits = IndexBackedSearchHits.convertToIndexBackedSearchHits(batchResults.getSearchHits(query), index);
+			SearchHits hits = batchResults.getSearchHits(query);
 
 			RM1Builder rmBuilder = new RM1Builder(query, hits, fbDocs, fbTerms, cs);
 			RM3Builder rm3Builder = new RM3Builder(query, rmBuilder);
 			FeatureVector rmVec = rm3Builder.buildRelevanceModel(origQueryWeight, stopper);
+			
+			System.err.println(rmVec.toString(10));
 			
 			GQuery rmQuery = new GQuery();
 			rmQuery.setFeatureVector(rmVec);

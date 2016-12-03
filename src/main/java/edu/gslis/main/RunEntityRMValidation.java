@@ -77,9 +77,9 @@ public class RunEntityRMValidation {
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);
-		
+	
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
-		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
+		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entityRM3", outputWriter);
 		
 		Iterator<String> qit = batchResults.queryIterator();
 		while (qit.hasNext()) {
