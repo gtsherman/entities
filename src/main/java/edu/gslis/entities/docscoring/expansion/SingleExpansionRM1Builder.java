@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.Map;
 
 import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
-import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
 import edu.gslis.evaluation.running.runners.EntityRunner;
 import edu.gslis.queries.GQuery;
 import edu.gslis.scoring.DocScorer;
@@ -74,35 +73,28 @@ public class SingleExpansionRM1Builder {
 	public FeatureVector buildRelevanceModel(Stopper stopper, Map<String, Double> params) {
 		FeatureVector termScores = new FeatureVector(stopper);
 		
-		// Store the current parameters of each DocScorerCreator so we can reuse them later
-		double docScorerMu = docScorerCreator.getMu();
-		double expansionScorerMu = expansionScorerCreator.getMu();
-		
 		int i = 0;
 		Iterator<SearchHit> hitIt = initialHits.iterator();
 		while (hitIt.hasNext() && i < feedbackDocs) {
 			SearchHit hit = hitIt.next();
 			i++;
-			System.err.println("Scoring doc "+i+" of "+feedbackDocs);
 			
 			// Prep the scorers
 			// Set mu to whatever the client provided, since it will be set to 0 after each hit is scored
-			System.err.println("\tPrepping scorers");
-			docScorerCreator.setMu(docScorerMu);
-			expansionScorerCreator.setMu(expansionScorerMu);
+			docScorerCreator.setMu(-1);
+			expansionScorerCreator.setMu(-1);
 			DocScorer docScorer = docScorerCreator.getDocScorer(hit);
 			DocScorer expansionScorer = expansionScorerCreator.getDocScorer(hit);
 			
 			// Combine into an interpolated scorer
 			Map<DocScorer, Double> docScorers = new HashMap<DocScorer, Double>();
-			docScorers.put(docScorer, params.get(DoubleEntityRunner.DOCUMENT_WEIGHT));
-			docScorers.put(expansionScorer, params.get(DoubleEntityRunner.WIKI_WEIGHT));
-			DocScorer interpolatedScorer = new InterpolatedDocScorer(docScorers);
+			docScorers.put(docScorer, params.get(EntityRunner.DOCUMENT_WEIGHT)); // P(q|D)
+			docScorers.put(expansionScorer, params.get(EntityRunner.EXPANSION_WEIGHT)); // P(q|E)
+			DocScorer interpolatedScorer = new InterpolatedDocScorer(docScorers); // lambda
 			
 			// Score the query
-			System.err.println("\tScoring query");
 			QueryScorer queryScorer = new QueryLikelihoodQueryScorer(interpolatedScorer);
-			double queryScore = Math.exp(queryScorer.scoreQuery(query));
+			double queryScore = Math.exp(queryScorer.scoreQuery(query)); // P(Q|D)
 			
 			// Prep the 0-mu scorers
 			// This is important because RM1 performs much better with mu == 0 for non-query terms
@@ -113,13 +105,12 @@ public class SingleExpansionRM1Builder {
 			
 			// Combine into an interpolated scorer
 			docScorers = new HashMap<DocScorer, Double>();
-			docScorers.put(docScorer, params.get(EntityRunner.DOCUMENT_WEIGHT));
-			docScorers.put(expansionScorer, params.get(EntityRunner.EXPANSION_WEIGHT));
-			interpolatedScorer = new InterpolatedDocScorer(docScorers);	
+			docScorers.put(docScorer, params.get(EntityRunner.DOCUMENT_WEIGHT)); // P(w|D)
+			docScorers.put(expansionScorer, params.get(EntityRunner.EXPANSION_WEIGHT)); // P(w|E)
+			interpolatedScorer = new InterpolatedDocScorer(docScorers);	// lambda
 			
 			DocScorer rmScorer = new RelevanceModelScorer(interpolatedScorer, queryScore);
 				
-			System.err.println("\tCollecting terms");
 			FeatureVector terms = new FeatureVector(stopper);
 			for (String term : hit.getFeatureVector().getFeatures()) {
 				if (stopper != null && stopper.isStopWord(term)) {
@@ -137,43 +128,17 @@ public class SingleExpansionRM1Builder {
 					terms.addTerm(term, expansionHit.getFeatureVector().getFeatureWeight(term));
 				}
 			}
-			terms.clip(100);
+			terms.clip(50);
 			
-			System.err.println("\tScoring terms ("+terms.getFeatureCount()+")");
 			Iterator<String> termit = terms.iterator();
 			while (termit.hasNext()) {
 				String term = termit.next();
-				termScores.addTerm(term, rmScorer.scoreTerm(term));
+				termScores.addTerm(term, rmScorer.scoreTerm(term)/initialHits.size());
 			}
 		}
 
 		termScores.clip(feedbackTerms);
 		return termScores;
-	}
-	
-	private void scoreAllTerms(SearchHit hit,
-			FeatureVector accumulatedTermScores,
-			Stopper stopper,
-			DocScorer rmScorer) {
-		for (String term : hit.getFeatureVector().getFeatures()) {
-			if (stopper != null && stopper.isStopWord(term)) {
-				continue;
-			}
-			accumulatedTermScores.addTerm(term, rmScorer.scoreTerm(term));
-		}
-	}
-	
-	private void scoreTermsInExpansionDocuments(SearchHit originalHit,
-			FeatureVector termScores,
-			Stopper stopper,
-			DocScorer rmScorer,
-			ExpansionDocsDocScorerCreator expansionScorerCreator) {
-		for (String docno : expansionScorerCreator.getClusters().getDocsRelatedTo(originalHit).keySet()) {
-			SearchHit hit = new IndexBackedSearchHit(expansionScorerCreator.getIndex());
-			hit.setDocno(docno);
-			
-			scoreAllTerms(hit, termScores, stopper, rmScorer);
-		}
 	}
 
 }
