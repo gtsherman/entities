@@ -71,11 +71,6 @@ public class MultiExpansionRM1Builder {
 	public FeatureVector buildRelevanceModel(Stopper stopper, Map<String, Double> params) {
 		FeatureVector termScores = new FeatureVector(stopper);
 		
-		// Store the current parameters of each DocScorerCreator so we can reuse them later
-		double docScorerMu = docScorerCreator.getMu();
-		double selfScorerMu = selfExpansionScorerCreator.getMu();
-		double wikiScorerMu = wikiExpansionScorerCreator.getMu();
-		
 		int i = 0;
 		Iterator<SearchHit> hitIt = initialHits.iterator();
 		while (hitIt.hasNext() && i < feedbackDocs) {
@@ -84,9 +79,9 @@ public class MultiExpansionRM1Builder {
 			
 			// Prep the scorers
 			// Set mu to whatever the client provided, since it will be set to 0 after each hit is scored
-			docScorerCreator.setMu(docScorerMu);
-			selfExpansionScorerCreator.setMu(selfScorerMu);
-			wikiExpansionScorerCreator.setMu(wikiScorerMu);
+			docScorerCreator.setMu(-1);
+			selfExpansionScorerCreator.setMu(-1);
+			wikiExpansionScorerCreator.setMu(-1);
 			DocScorer docScorer = docScorerCreator.getDocScorer(hit);
 			DocScorer selfScorer = selfExpansionScorerCreator.getDocScorer(hit);
 			DocScorer wikiScorer = wikiExpansionScorerCreator.getDocScorer(hit);
@@ -120,34 +115,47 @@ public class MultiExpansionRM1Builder {
 			
 			DocScorer rmScorer = new RelevanceModelScorer(interpolatedScorer, queryScore);
 				
-			// Score each term for the original document
-			scoreAllTerms(hit, termScores, stopper, rmScorer);
-
-			// Score each term for each expansion document
-			scoreTermsInExpansionDocuments(hit, termScores, stopper, rmScorer, selfExpansionScorerCreator);
-			scoreTermsInExpansionDocuments(hit, termScores, stopper, rmScorer, wikiExpansionScorerCreator);
+			FeatureVector terms = new FeatureVector(stopper);
+			for (String term : hit.getFeatureVector().getFeatures()) {
+				if (stopper != null && stopper.isStopWord(term)) {
+					continue;
+				}
+				terms.addTerm(term, hit.getFeatureVector().getFeatureWeight(term));
+			}
+			if (wikiExpansionScorerCreator.getClusters().getDocsRelatedTo(hit) != null) {
+				for (String docno : wikiExpansionScorerCreator.getClusters().getDocsRelatedTo(hit).keySet()) {
+					SearchHit expansionHit = new IndexBackedSearchHit(wikiExpansionScorerCreator.getIndex());
+					expansionHit.setDocno(docno);
+					for (String term : expansionHit.getFeatureVector().getFeatures()) {
+						if (stopper != null && stopper.isStopWord(term)) {
+							continue;
+						}
+						terms.addTerm(term, expansionHit.getFeatureVector().getFeatureWeight(term));
+					}
+				}
+			}
+			if (selfExpansionScorerCreator.getClusters().getDocsRelatedTo(hit) != null) {
+				for (String docno : selfExpansionScorerCreator.getClusters().getDocsRelatedTo(hit).keySet()) {
+					SearchHit expansionHit = new IndexBackedSearchHit(selfExpansionScorerCreator.getIndex());
+					expansionHit.setDocno(docno);
+					for (String term : expansionHit.getFeatureVector().getFeatures()) {
+						if (stopper != null && stopper.isStopWord(term)) {
+							continue;
+						}
+						terms.addTerm(term, expansionHit.getFeatureVector().getFeatureWeight(term));
+					}
+				}
+			}
+			
+			Iterator<String> termit = terms.iterator();
+			while (termit.hasNext()) {
+				String term = termit.next();
+				termScores.addTerm(term, rmScorer.scoreTerm(term));
+			}
 		}
 
 		termScores.clip(feedbackTerms);
 		return termScores;
-	}
-	
-	private void scoreAllTerms(SearchHit hit, FeatureVector accumulatedTermScores, Stopper stopper, DocScorer rmScorer) {
-		for (String term : hit.getFeatureVector().getFeatures()) {
-			if (stopper != null && stopper.isStopWord(term)) {
-				continue;
-			}
-			accumulatedTermScores.addTerm(term, rmScorer.scoreTerm(term));
-		}
-	}
-	
-	private void scoreTermsInExpansionDocuments(SearchHit originalHit, FeatureVector termScores, Stopper stopper, DocScorer rmScorer, ExpansionDocsDocScorerCreator expansionScorerCreator) {
-		for (String docno : expansionScorerCreator.getClusters().getDocsRelatedTo(originalHit).keySet()) {
-			SearchHit hit = new IndexBackedSearchHit(expansionScorerCreator.getIndex());
-			hit.setDocno(docno);
-			
-			scoreAllTerms(hit, termScores, stopper, rmScorer);
-		}
 	}
 
 }
