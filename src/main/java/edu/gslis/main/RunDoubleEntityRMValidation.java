@@ -68,7 +68,7 @@ public class RunDoubleEntityRMValidation {
 		long seed = Long.parseLong(args[1]);
 		
 		DirichletDocScorerCreator docScorerCreator = new DirichletDocScorerCreator(csSelf);
-		ExpansionDocsDocScorerCreator selfScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, selfClusters.getClusters());
+		ExpansionDocsDocScorerCreator selfScorerCreator = new ExpansionDocsDocScorerCreator(index, selfClusters.getClusters());
 		ExpansionDocsDocScorerCreator wikiScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, wikiClusters.getClusters());
 
 		DoubleEntityRMRunner runner = new DoubleEntityRMRunner(index, initialHitsBatch, stopper,
@@ -78,7 +78,7 @@ public class RunDoubleEntityRMValidation {
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
-		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entities", outputWriter);
+		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("rm3", outputWriter);
 		
 		Iterator<String> qit = batchResults.queryIterator();
 		while (qit.hasNext()) {
