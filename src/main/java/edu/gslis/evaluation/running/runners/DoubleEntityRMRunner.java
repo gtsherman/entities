@@ -5,8 +5,8 @@ import java.util.Iterator;
 import java.util.Map;
 
 import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
+import edu.gslis.entities.docscoring.expansion.ExpansionRM3Builder;
 import edu.gslis.entities.docscoring.expansion.MultiExpansionRM1Builder;
-import edu.gslis.entities.docscoring.expansion.MultiExpansionRM3Builder;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
@@ -141,7 +141,7 @@ public class DoubleEntityRMRunner implements QueryRunner {
 			MultiExpansionRM1Builder rm1Builder = new MultiExpansionRM1Builder(query, initialHits,
 					docScorerCreator, selfExpansionScorerCreator, wikiExpansionScorerCreator,
 					fbDocs, fbTerms);
-			MultiExpansionRM3Builder rm3Builder = new MultiExpansionRM3Builder(query, rm1Builder);
+			ExpansionRM3Builder rm3Builder = new ExpansionRM3Builder(query, rm1Builder);
 			
 			// Build the RM3 and convert to query
 			FeatureVector rm3Vector = rm3Builder.buildRelevanceModel(stopper, params);

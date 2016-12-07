@@ -7,17 +7,17 @@ import edu.gslis.queries.GQuery;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
-public class MultiExpansionRM3Builder {
+public class ExpansionRM3Builder {
 	
-	private MultiExpansionRM1Builder rm1;
+	private ExpansionRM1Builder rm1;
 	private GQuery query;
 	
-	public MultiExpansionRM3Builder(GQuery query, MultiExpansionRM1Builder rm1) {
+	public ExpansionRM3Builder(GQuery query, ExpansionRM1Builder rm1) {
 		setRM1Builder(rm1);
 		setQuery(query);
 	}
 	
-	public void setRM1Builder(MultiExpansionRM1Builder rm1) {
+	public void setRM1Builder(ExpansionRM1Builder rm1) {
 		this.rm1 = rm1;
 	}
 	

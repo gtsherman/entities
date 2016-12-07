@@ -19,7 +19,7 @@ import edu.gslis.searchhits.SearchHits;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
-public class MultiExpansionRM1Builder {
+public class MultiExpansionRM1Builder implements ExpansionRM1Builder {
 	
 	public static final int DEFAULT_FEEDBACK_DOCS = 20;
 	public static final int DEFAULT_FEEDBACK_TERMS = 20;

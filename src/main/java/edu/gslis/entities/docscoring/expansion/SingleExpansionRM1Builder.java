@@ -19,7 +19,7 @@ import edu.gslis.searchhits.SearchHits;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
-public class SingleExpansionRM1Builder {
+public class SingleExpansionRM1Builder implements ExpansionRM1Builder {
 	
 	public static final int DEFAULT_FEEDBACK_DOCS = 20;
 	public static final int DEFAULT_FEEDBACK_TERMS = 20;
@@ -118,22 +118,23 @@ public class SingleExpansionRM1Builder {
 				}
 				terms.addTerm(term, hit.getFeatureVector().getFeatureWeight(term));
 			}
-			for (String docno : expansionScorerCreator.getClusters().getDocsRelatedTo(hit).keySet()) {
-				SearchHit expansionHit = new IndexBackedSearchHit(expansionScorerCreator.getIndex());
-				expansionHit.setDocno(docno);
-				for (String term : expansionHit.getFeatureVector().getFeatures()) {
-					if (stopper != null && stopper.isStopWord(term)) {
-						continue;
+			if (expansionScorerCreator.getClusters().getDocsRelatedTo(hit) != null) {
+				for (String docno : expansionScorerCreator.getClusters().getDocsRelatedTo(hit).keySet()) {
+					SearchHit expansionHit = new IndexBackedSearchHit(expansionScorerCreator.getIndex());
+					expansionHit.setDocno(docno);
+					for (String term : expansionHit.getFeatureVector().getFeatures()) {
+						if (stopper != null && stopper.isStopWord(term)) {
+							continue;
+						}
+						terms.addTerm(term, expansionHit.getFeatureVector().getFeatureWeight(term));
 					}
-					terms.addTerm(term, expansionHit.getFeatureVector().getFeatureWeight(term));
 				}
 			}
-			terms.clip(50);
 			
 			Iterator<String> termit = terms.iterator();
 			while (termit.hasNext()) {
 				String term = termit.next();
-				termScores.addTerm(term, rmScorer.scoreTerm(term)/initialHits.size());
+				termScores.addTerm(term, rmScorer.scoreTerm(term));
 			}
 		}
 

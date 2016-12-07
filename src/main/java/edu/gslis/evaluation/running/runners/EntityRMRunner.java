@@ -6,7 +6,7 @@ import java.util.Map;
 
 import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
 import edu.gslis.entities.docscoring.expansion.SingleExpansionRM1Builder;
-import edu.gslis.entities.docscoring.expansion.SingleExpansionRM3Builder;
+import edu.gslis.entities.docscoring.expansion.ExpansionRM3Builder;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
@@ -27,17 +27,17 @@ public class EntityRMRunner implements QueryRunner {
 	private SearchHitsBatch initialResultsBatch;
 	private Stopper stopper;
 	private DirichletDocScorerCreator docScorerCreator;
-	private ExpansionDocsDocScorerCreator wikiExpansionScorerCreator;
+	private ExpansionDocsDocScorerCreator expansionScorerCreator;
 		
 	private ParameterizedResults processedQueries = new ParameterizedResults();
 	
 	public EntityRMRunner(IndexWrapper targetIndex, SearchHitsBatch initialResultsBatch, Stopper stopper,
-			DirichletDocScorerCreator docScorerCreator, ExpansionDocsDocScorerCreator wikiExpansionScorerCreator) {
+			DirichletDocScorerCreator docScorerCreator, ExpansionDocsDocScorerCreator expansionScorerCreator) {
 		this.targetIndex = targetIndex;
 		this.initialResultsBatch = initialResultsBatch;
 		this.stopper = stopper;
 		this.docScorerCreator = docScorerCreator;
-		this.wikiExpansionScorerCreator = wikiExpansionScorerCreator;
+		this.expansionScorerCreator = expansionScorerCreator;
 	}
 
 	@Override
@@ -51,14 +51,14 @@ public class EntityRMRunner implements QueryRunner {
 			double origWeight = origW / 10.0;
 			currentParams.put(EntityRunner.DOCUMENT_WEIGHT, origWeight);
 
-			double wikiWeight = (10 - origW) / 10.0;
-			currentParams.put(EntityRunner.EXPANSION_WEIGHT, wikiWeight);
+			double expansionWeight = (10 - origW) / 10.0;
+			currentParams.put(EntityRunner.EXPANSION_WEIGHT, expansionWeight);
 				
 			for (int lambda = 0; lambda <= 10; lambda += 1) {
 				double lam = lambda / 10.0;
 				currentParams.put(RMRunner.ORIG_QUERY_WEIGHT, lam);
 
-				System.err.println("\t\tParameters: "+origWeight+" (doc), "+wikiWeight+" (wiki), "+lam+" (mixing)");
+				System.err.println("\t\tParameters: "+origWeight+" (doc), "+expansionWeight+" (expansion), "+lam+" (mixing)");
 				SearchHitsBatch batchResults = run(queries, trainingNumResults, currentParams);
 
 				//double metricVal = evaluator.evaluate(batchResults);
@@ -130,13 +130,13 @@ public class EntityRMRunner implements QueryRunner {
 
 			SearchHits initialHits = getInitialHits(query);
 			
-			// Setup RM1 and RM3 builders
-			SingleExpansionRM1Builder rm1Builder = new SingleExpansionRM1Builder(query, initialHits,
-					docScorerCreator, wikiExpansionScorerCreator, fbDocs, fbTerms);
-			SingleExpansionRM3Builder rm3Builder = new SingleExpansionRM3Builder(query, rm1Builder);
+			SingleExpansionRM1Builder rm1 = new SingleExpansionRM1Builder(query, initialHits, docScorerCreator, expansionScorerCreator, fbDocs, fbTerms);
+			ExpansionRM3Builder rm3 = new ExpansionRM3Builder(query, rm1);
+			FeatureVector rm3Vector = rm3.buildRelevanceModel(stopper, params);
 			
-			// Build the RM3 and convert to query
-			FeatureVector rm3Vector = rm3Builder.buildRelevanceModel(stopper, params);
+			System.err.println("RM3 for query "+query.getTitle()+" ("+query.getText()+"):");
+			System.err.println(rm3Vector.toString(10));
+
 			GQuery newQuery = new GQuery();
 			newQuery.setTitle(query.getTitle());
 			newQuery.setFeatureVector(rm3Vector);
