@@ -11,6 +11,7 @@ import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.scoring.expansion.RM1Builder;
+import edu.gslis.scoring.expansion.StandardRM1Builder;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
@@ -61,7 +62,7 @@ public class CreateRMs {
 			}
 
 			// RM1 built on target index
-			RM1Builder rm1 = new RM1Builder(query, batchResults.getSearchHits(query), fbDocs, fbTerms, collectionStats);
+			RM1Builder rm1 = new StandardRM1Builder(query, batchResults.getSearchHits(query), fbDocs, fbTerms, collectionStats);
 			FeatureVector rmVec = rm1.buildRelevanceModel(stopper);
 			rmVec.normalize();
 			

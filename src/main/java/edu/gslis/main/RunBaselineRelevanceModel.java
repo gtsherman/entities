@@ -14,6 +14,7 @@ import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.scoring.expansion.RM1Builder;
 import edu.gslis.scoring.expansion.RM3Builder;
+import edu.gslis.scoring.expansion.StandardRM1Builder;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
@@ -76,7 +77,7 @@ public class RunBaselineRelevanceModel {
 
 			SearchHits hits = batchResults.getSearchHits(query);
 
-			RM1Builder rmBuilder = new RM1Builder(query, hits, fbDocs, fbTerms, cs);
+			RM1Builder rmBuilder = new StandardRM1Builder(query, hits, fbDocs, fbTerms, cs);
 			RM3Builder rm3Builder = new RM3Builder(query, rmBuilder);
 			FeatureVector rmVec = rm3Builder.buildRelevanceModel(origQueryWeight, stopper);
 			
