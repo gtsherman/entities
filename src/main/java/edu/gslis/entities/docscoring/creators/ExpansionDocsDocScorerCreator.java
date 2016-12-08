@@ -14,10 +14,16 @@ public class ExpansionDocsDocScorerCreator extends DocScorerCreator {
 	private IndexWrapper expansionIndex;
 	private RelatedDocs clusters;
 	private double mu = DEFAULT_MU;
+	private boolean useStoredScorers = true;
 	
 	public ExpansionDocsDocScorerCreator(IndexWrapper expansionIndex, RelatedDocs clusters) {
 		this.expansionIndex = expansionIndex;
 		this.clusters = clusters;
+	}
+	
+	public ExpansionDocsDocScorerCreator(IndexWrapper expansionIndex, RelatedDocs clusters, boolean useStoredScorers) {
+		this(expansionIndex, clusters);
+		useStoredScorers(useStoredScorers);
 	}
 	
 	public ExpansionDocsDocScorerCreator(double mu, IndexWrapper expansionIndex, RelatedDocs clusters) {
@@ -25,6 +31,11 @@ public class ExpansionDocsDocScorerCreator extends DocScorerCreator {
 		setMu(mu);
 	}
 	
+	public ExpansionDocsDocScorerCreator(double mu, IndexWrapper expansionIndex, RelatedDocs clusters, boolean useStoredScorers) {
+		this(mu, expansionIndex, clusters);
+		useStoredScorers(useStoredScorers);
+	}
+
 	public IndexWrapper getIndex() {
 		return expansionIndex;
 	}
@@ -40,6 +51,10 @@ public class ExpansionDocsDocScorerCreator extends DocScorerCreator {
 	public void setMu(double mu) {
 		this.mu = mu;
 	}
+	
+	public void useStoredScorers(boolean useStoredScorers) {
+		this.useStoredScorers = useStoredScorers;
+	}
 
 	@Override
 	protected void createIfNecessary(SearchHit doc) {
@@ -51,7 +66,11 @@ public class ExpansionDocsDocScorerCreator extends DocScorerCreator {
 			} else {
 				docScorer = new ExpansionDocsDocScorer(doc, expansionIndex, clusters);
 			}
-			storedScorers.put(docKey, new StoredDocScorer(docScorer));
+			if (useStoredScorers) {
+				storedScorers.put(docKey, new StoredDocScorer(docScorer));
+			} else {
+				storedScorers.put(docKey, docScorer);
+			}
 		}
 	}
 	
