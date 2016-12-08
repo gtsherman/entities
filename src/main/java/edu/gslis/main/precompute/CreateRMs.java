@@ -1,20 +1,22 @@
 package edu.gslis.main.precompute;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Iterator;
 
+import edu.gslis.docscoring.support.CollectionStats;
+import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
-import edu.gslis.queries.expansion.FeedbackRelevanceModel;
-import edu.gslis.readers.QueryEntitiesReader;
-import edu.gslis.searchhits.SearchHit;
-import edu.gslis.searchhits.SearchHits;
+import edu.gslis.scoring.expansion.RM1Builder;
+import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
+import edu.gslis.utils.readers.SearchResultsReader;
 
 public class CreateRMs {
 
@@ -23,18 +25,16 @@ public class CreateRMs {
 		config.read(args[0]);
 		
 		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
-		index.setTimeFieldName(null);
+		
+		CollectionStats collectionStats = new IndexBackedCollectionStats();
+		collectionStats.setStatSource(config.get("index"));
+		
 		Stopper stopper = new Stopper(config.get("stoplist"));
+
 		GQueriesJsonImpl queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
+
 		String outDir = config.get("rms-dir");
-		
-		QueryEntitiesReader qdocs = new QueryEntitiesReader();
-		String queryEntities = config.get("query-entities");
-		if (queryEntities != null) {
-			qdocs.readFileAbsolute(queryEntities);
-		}
-		
 		
 		int fbDocs = 20;
 		if (config.get("fb-docs") != null) {
@@ -45,6 +45,9 @@ public class CreateRMs {
 		if (config.get("fb-terms") != null) {
 			fbTerms = Integer.parseInt(config.get("fb-terms"));
 		}
+		
+		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
+		SearchHitsBatch batchResults = resultsReader.getBatchResults();
 		
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {
@@ -57,31 +60,12 @@ public class CreateRMs {
 				continue;
 			}
 
-			// RM built on target index
-			FeedbackRelevanceModel rm = new FeedbackRelevanceModel();
-			rm.setIndex(index);
-			rm.setDocCount(fbDocs);
-			rm.setTermCount(fbTerms);
-			rm.setStopper(stopper);
-			rm.setOriginalQuery(query);
-			
-			if (queryEntities != null) {
-				SearchHits hits = qdocs.getEntitiesForQuery(query);
-				hits.crop(fbDocs);
-				Iterator<SearchHit> hitit = hits.iterator();
-				while (hitit.hasNext()) {
-					SearchHit hit = hitit.next();
-					hit.setDocID(index.getDocId(hit.getDocno()));
-				}
-				rm.setRes(hits);
-			}
-
-			rm.build();
-
-			FeatureVector rmVec = rm.asGquery().getFeatureVector();
+			// RM1 built on target index
+			RM1Builder rm1 = new RM1Builder(query, batchResults.getSearchHits(query), fbDocs, fbTerms, collectionStats);
+			FeatureVector rmVec = rm1.buildRelevanceModel(stopper);
 			rmVec.normalize();
 			
-			FileWriter out = new FileWriter(outDir+"/"+query.getTitle());
+			FileWriter out = new FileWriter(outDir + File.separator + query.getTitle());
 			out.write(rmVec.toString(50));
 			out.close();
 		}
