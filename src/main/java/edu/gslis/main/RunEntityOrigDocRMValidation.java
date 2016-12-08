@@ -47,6 +47,8 @@ public class RunEntityOrigDocRMValidation {
 
 		String targetMetric = config.get("target-metric");
 		
+		String rmDir = config.get("rms-dir");
+		
 		DocumentClusterReader expansionClusters = new DocumentClusterReader(new File(config.get("document-entities-file")));
 
 		Set<String> terms = new HashSet<String>();
@@ -73,7 +75,7 @@ public class RunEntityOrigDocRMValidation {
 		DirichletDocScorerCreator docScorerCreator = new DirichletDocScorerCreator(cs);
 		ExpansionDocsDocScorerCreator expansionScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, expansionClusters.getClusters());
 
-		EntityOrigDocRMRunner runner = new EntityOrigDocRMRunner(initialHitsBatch, stopper, docScorerCreator, expansionScorerCreator);
+		EntityOrigDocRMRunner runner = new EntityOrigDocRMRunner(initialHitsBatch, stopper, rmDir, docScorerCreator, expansionScorerCreator);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);

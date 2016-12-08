@@ -4,8 +4,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
+import edu.gslis.entities.docscoring.expansion.FileLookupRM1Builder;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
@@ -37,10 +37,11 @@ public class EntityOrigDocRMRunner implements QueryRunner {
 	private Stopper stopper;
 	private DirichletDocScorerCreator docScorerCreator;
 	private ExpansionDocsDocScorerCreator expansionScorerCreator;
+	private String rmDir;
 		
 	private ParameterizedResults processedQueries = new ParameterizedResults();
 	
-	public EntityOrigDocRMRunner(SearchHitsBatch initialResultsBatch, Stopper stopper,
+	public EntityOrigDocRMRunner(SearchHitsBatch initialResultsBatch, Stopper stopper, String rmDir,
 			DirichletDocScorerCreator docScorerCreator, ExpansionDocsDocScorerCreator expansionScorerCreator) {
 		this.initialResultsBatch = initialResultsBatch;
 		this.stopper = stopper;
@@ -127,21 +128,11 @@ public class EntityOrigDocRMRunner implements QueryRunner {
 		if (!processedQueries.resultsExist(query, paramVals)) {
 			query.applyStopper(stopper);
 			
-			int fbDocs = 20;
-			if (params.containsKey(RMRunner.FEEDBACK_DOCUMENTS)) {
-				fbDocs = params.get(RMRunner.FEEDBACK_DOCUMENTS).intValue();
-			}
-			int fbTerms = 20;
-			if (params.containsKey(RMRunner.FEEDBACK_TERMS)) {
-				params.get(RMRunner.FEEDBACK_TERMS).intValue();
-			}
-			
 			SearchHits initialHits = getInitialHits(query);
 
-			CollectionStats collectionStats = docScorerCreator.getCollectionStats();
-			RM1Builder rm1 = new RM1Builder(query, initialHits, fbDocs, fbTerms, collectionStats);
+			RM1Builder rm1 = new FileLookupRM1Builder(query, rmDir);
 			RM3Builder rm3 = new RM3Builder(query, rm1);
-			FeatureVector rm3Vector = rm3.buildRelevanceModel(params.get(RMRunner.ORIG_QUERY_WEIGHT), stopper);
+			FeatureVector rm3Vector = rm3.buildRelevanceModel(params.get(RMRunner.ORIG_QUERY_WEIGHT));
 			
 			System.err.println("RM3 for query "+query.getTitle()+" ("+query.getText()+"):");
 			System.err.println(rm3Vector.toString(10));
@@ -161,7 +152,6 @@ public class EntityOrigDocRMRunner implements QueryRunner {
 				SearchHit newDoc = new SearchHit();
 				newDoc.setDocno(doc.getDocno());
 				newDoc.setFeatureVector(doc.getFeatureVector());
-				newDoc.setQueryName(query.getTitle());
 
 				DocScorer docScorer = docScorerCreator.getDocScorer(newDoc);
 				DocScorer expansionDocScorer = expansionScorerCreator.getDocScorer(newDoc);
