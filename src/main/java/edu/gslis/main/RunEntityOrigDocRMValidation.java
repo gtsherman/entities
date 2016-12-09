@@ -72,8 +72,8 @@ public class RunEntityOrigDocRMValidation {
 
 		long seed = Long.parseLong(args[1]);
 		
-		DirichletDocScorerCreator docScorerCreator = new DirichletDocScorerCreator(cs);
-		ExpansionDocsDocScorerCreator expansionScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, expansionClusters.getClusters());
+		DirichletDocScorerCreator docScorerCreator = new DirichletDocScorerCreator(cs, false);
+		ExpansionDocsDocScorerCreator expansionScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, expansionClusters.getClusters(), false);
 
 		EntityOrigDocRMRunner runner = new EntityOrigDocRMRunner(initialHitsBatch, stopper, rmDir, docScorerCreator, expansionScorerCreator);
 		KFoldValidator validator = new KFoldValidator(runner, 10);

@@ -45,6 +45,7 @@ public class EntityOrigDocRMRunner implements QueryRunner {
 			DirichletDocScorerCreator docScorerCreator, ExpansionDocsDocScorerCreator expansionScorerCreator) {
 		this.initialResultsBatch = initialResultsBatch;
 		this.stopper = stopper;
+		this.rmDir = rmDir;
 		this.docScorerCreator = docScorerCreator;
 		this.expansionScorerCreator = expansionScorerCreator;
 	}
@@ -168,6 +169,10 @@ public class EntityOrigDocRMRunner implements QueryRunner {
 			}
 			
 			processedHits.rank();
+			
+			if (numResults == 1000) {
+				return processedHits;
+			}
 			
 			// Add the results to our processed queries map
 			processedQueries.addResults(processedHits, query, paramVals);
