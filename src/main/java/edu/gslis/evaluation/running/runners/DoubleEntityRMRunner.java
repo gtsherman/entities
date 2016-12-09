@@ -145,6 +145,10 @@ public class DoubleEntityRMRunner implements QueryRunner {
 			
 			// Build the RM3 and convert to query
 			FeatureVector rm3Vector = rm3Builder.buildRelevanceModel(stopper, params);
+			
+			System.err.println("RM3 for query "+query.getTitle()+" ("+query.getText()+"):");
+			System.err.println(rm3Vector.toString(10));
+			
 			GQuery newQuery = new GQuery();
 			newQuery.setTitle(query.getTitle());
 			newQuery.setFeatureVector(rm3Vector);

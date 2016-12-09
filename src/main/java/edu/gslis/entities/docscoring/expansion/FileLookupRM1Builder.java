@@ -13,6 +13,7 @@ public class FileLookupRM1Builder implements RM1Builder {
 	
 	private String basePath;
 	private GQuery query;
+	private int fbTerms = 20;
 	
 	public FileLookupRM1Builder(GQuery query, String basePath) {
 		setQuery(query);
@@ -25,6 +26,10 @@ public class FileLookupRM1Builder implements RM1Builder {
 	
 	public void setQuery(GQuery query) {
 		this.query = query;
+	}
+	
+	public void setFeedbackTerms(int fbTerms) {
+		this.fbTerms = fbTerms;
 	}
 	
 	public FeatureVector buildRelevanceModel() {
@@ -44,6 +49,7 @@ public class FileLookupRM1Builder implements RM1Builder {
 			}
 			rmVec.normalize();
 		}
+		rmVec.clip(fbTerms);
 		return rmVec;
 	}
 
