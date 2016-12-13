@@ -25,11 +25,11 @@ public class QueryProbabilityReader extends Reader {
 	
 	public void createTermProbs() {
 		termProbs = new HashMap<String, Double>();
-		Iterator<Map<String, String>> tupleIt = results.iterator();
+		Iterator<String[]> tupleIt = results.iterator();
 		while (tupleIt.hasNext()) {
-			Map<String, String> termTuple = tupleIt.next();
-			termProbs.put(termTuple.get(RelevanceModelReader.TERM_FIELD),
-					Double.parseDouble(termTuple.get(RelevanceModelReader.SCORE_FIELD)));
+			String[] termTuple = tupleIt.next();
+			termProbs.put(valueOfField(RelevanceModelReader.TERM_FIELD, termTuple),
+					Double.parseDouble(valueOfField(RelevanceModelReader.SCORE_FIELD, termTuple)));
 		}
 	}
 

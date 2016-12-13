@@ -3,9 +3,7 @@ package edu.gslis.related_docs;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Scanner;
 
 import edu.gslis.utils.readers.Reader;
@@ -43,31 +41,23 @@ public class DocumentClusterReader extends Reader {
 				String line = scanner.nextLine();
 				lineCount++;
 
-				Map<String, String> field = new HashMap<String, String>();
-
 				String[] parts = line.split(delimiter);
 				for (int i = 0; i < parts.length; i++) {
-					String fieldValue = parts[i].trim();
-					String fieldName;
-					try {
-						fieldName = fields.get(i);
-					} catch (IndexOutOfBoundsException e) {
-						fieldName = "Field"+i;
-					}
+					parts[i] = parts[i].trim();
+
+					String fieldName = fieldAtIndex(i);
 					
 					if (fieldName.equals(ORIGINAL_DOCUMENT)) {
-						if (!fieldValue.equals(currentDoc)) {
+						if (!parts[i].equals(currentDoc)) {
 							lineCount = 1;
-							currentDoc = fieldValue;
+							currentDoc = parts[i];
 						} else if (lineCount > limit) { // it is the same document as last line
 							continue; // skip this line, we've reached our limit for this document
 						}
 					}
-					
-					field.put(fieldName, fieldValue);
 				}
 				
-				results.add(field);
+				results.add(parts);
 			}
 			scanner.close();
 		} catch (FileNotFoundException e) {
@@ -77,12 +67,12 @@ public class DocumentClusterReader extends Reader {
 	
 	private void createRelatedDocs() {
 		relatedDocs = new RelatedDocs();
-		Iterator<Map<String, String>> tupleIt = results.iterator();
+		Iterator<String[]> tupleIt = results.iterator();
 		while (tupleIt.hasNext()) {
-			Map<String, String> tuple = tupleIt.next();
-			relatedDocs.setRelatedDocScore(tuple.get(ORIGINAL_DOCUMENT),
-					tuple.get(RELATED_DOCUMENT),
-					Double.parseDouble(tuple.get(RELATED_DOCUMENT_SCORE)));
+			String[] tuple = tupleIt.next();
+			relatedDocs.setRelatedDocScore(valueOfField(ORIGINAL_DOCUMENT, tuple),
+					valueOfField(RELATED_DOCUMENT, tuple),
+					Double.parseDouble(valueOfField(RELATED_DOCUMENT_SCORE, tuple)));
 		}
 	}
 
