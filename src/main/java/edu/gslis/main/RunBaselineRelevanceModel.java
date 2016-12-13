@@ -46,8 +46,7 @@ public class RunBaselineRelevanceModel {
 			numDocs = Integer.parseInt(config.get("num-docs"));
 		}
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
-		SearchHitsBatch batchResults = resultsReader.getBatchResults();
+		SearchHitsBatch batchResults = (new SearchResultsReader(new File(config.get("initial-hits")), index)).getBatchResults();;
 		
 		int fbDocs = 20;
 		if (config.get("fb-docs") != null) {

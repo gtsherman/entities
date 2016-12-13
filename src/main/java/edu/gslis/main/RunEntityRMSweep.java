@@ -23,6 +23,7 @@ import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.related_docs.DocumentClusterReader;
+import edu.gslis.related_docs.RelatedDocs;
 import edu.gslis.scoring.creators.DirichletDocScorerCreator;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
@@ -44,7 +45,7 @@ public class RunEntityRMSweep {
 		GQueries queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
 
-		DocumentClusterReader expansionClusters = new DocumentClusterReader(new File(config.get("document-entities-file")));
+		RelatedDocs expansionClusters = (new DocumentClusterReader(new File(config.get("document-entities-file")))).getClusters();
 
 		Set<String> terms = new HashSet<String>();
 		Iterator<GQuery> queryIt = queries.iterator();
@@ -59,11 +60,10 @@ public class RunEntityRMSweep {
 		
 		String outDir = config.get("single-entity-rm-sweep-dir"); 
 
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
-		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
+		SearchHitsBatch initialHitsBatch = (new SearchResultsReader(new File(config.get("initial-hits")), index)).getBatchResults();
 
 		DirichletDocScorerCreator docScorerCreator = new DirichletDocScorerCreator(cs);
-		ExpansionDocsDocScorerCreator expansionScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, expansionClusters.getClusters());
+		ExpansionDocsDocScorerCreator expansionScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, expansionClusters);
 
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entityRM3", outputWriter);

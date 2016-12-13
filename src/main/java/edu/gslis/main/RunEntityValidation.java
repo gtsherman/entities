@@ -50,8 +50,7 @@ public class RunEntityValidation {
 			}
 		}
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
-		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
+		SearchHitsBatch initialHitsBatch = (new SearchResultsReader(new File(config.get("initial-hits")), index)).getBatchResults();
 		
 		long seed = Long.parseLong(args[1]);
 		

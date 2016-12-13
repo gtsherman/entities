@@ -42,8 +42,7 @@ public class RunBaselineRetrieval {
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 		
-		SearchResultsReader results = new SearchResultsReader(new File(config.get("initial-hits")));
-		SearchHitsBatch batchResults = results.getBatchResults();
+		SearchHitsBatch batchResults = (new SearchResultsReader(new File(config.get("initial-hits")))).getBatchResults();
 		
 		DirichletDocScorerCreator ddsc = new DirichletDocScorerCreator(cs);
 

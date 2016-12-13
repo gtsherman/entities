@@ -22,6 +22,7 @@ import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.related_docs.DocumentClusterReader;
+import edu.gslis.related_docs.RelatedDocs;
 import edu.gslis.scoring.creators.DirichletDocScorerCreator;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
@@ -49,7 +50,7 @@ public class RunEntityOrigDocRMValidation {
 		
 		String rmDir = config.get("rms-dir");
 		
-		DocumentClusterReader expansionClusters = new DocumentClusterReader(new File(config.get("document-entities-file")));
+		RelatedDocs expansionClusters = (new DocumentClusterReader(new File(config.get("document-entities-file")))).getClusters();
 
 		Set<String> terms = new HashSet<String>();
 		Iterator<GQuery> queryIt = queries.iterator();
@@ -67,13 +68,12 @@ public class RunEntityOrigDocRMValidation {
 			evaluator = new NDCGEvaluator(qrels);
 		}
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
-		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
+		SearchHitsBatch initialHitsBatch = (new SearchResultsReader(new File(config.get("initial-hits")), index)).getBatchResults();
 
 		long seed = Long.parseLong(args[1]);
 		
 		DirichletDocScorerCreator docScorerCreator = new DirichletDocScorerCreator(cs, false);
-		ExpansionDocsDocScorerCreator expansionScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, expansionClusters.getClusters(), false);
+		ExpansionDocsDocScorerCreator expansionScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, expansionClusters, false);
 
 		EntityOrigDocRMRunner runner = new EntityOrigDocRMRunner(initialHitsBatch, stopper, rmDir, docScorerCreator, expansionScorerCreator);
 		KFoldValidator validator = new KFoldValidator(runner, 10);

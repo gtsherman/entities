@@ -22,6 +22,7 @@ import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.related_docs.DocumentClusterReader;
+import edu.gslis.related_docs.RelatedDocs;
 import edu.gslis.scoring.creators.DirichletDocScorerCreator;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
@@ -43,8 +44,8 @@ public class RunDoubleEntityRMValidation {
 		Qrels qrels = new Qrels(config.get("qrels"), false, 1);
 		String targetMetric = config.get("target-metric");
 		
-		DocumentClusterReader selfClusters = new DocumentClusterReader(new File(config.get("document-entities-file-self")));
-		DocumentClusterReader wikiClusters = new DocumentClusterReader(new File(config.get("document-entities-file-wiki")));
+		RelatedDocs selfClusters = (new DocumentClusterReader(new File(config.get("document-entities-file-self")))).getClusters();
+		RelatedDocs wikiClusters = (new DocumentClusterReader(new File(config.get("document-entities-file-wiki")))).getClusters();
 
 		Set<String> terms = new HashSet<String>();
 		Iterator<GQuery> queryIt = queries.iterator();
@@ -62,14 +63,13 @@ public class RunDoubleEntityRMValidation {
 			evaluator = new NDCGEvaluator(qrels);
 		}
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
-		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
+		SearchHitsBatch initialHitsBatch = (new SearchResultsReader(new File(config.get("initial-hits")), index)).getBatchResults();
 
 		long seed = Long.parseLong(args[1]);
 		
 		DirichletDocScorerCreator docScorerCreator = new DirichletDocScorerCreator(csSelf);
-		ExpansionDocsDocScorerCreator selfScorerCreator = new ExpansionDocsDocScorerCreator(index, selfClusters.getClusters());
-		ExpansionDocsDocScorerCreator wikiScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, wikiClusters.getClusters());
+		ExpansionDocsDocScorerCreator selfScorerCreator = new ExpansionDocsDocScorerCreator(index, selfClusters);
+		ExpansionDocsDocScorerCreator wikiScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, wikiClusters);
 
 		DoubleEntityRMRunner runner = new DoubleEntityRMRunner(index, initialHitsBatch, stopper,
 				docScorerCreator, selfScorerCreator, wikiScorerCreator);

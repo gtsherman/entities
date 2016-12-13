@@ -48,8 +48,7 @@ public class RunEntityBackedRetrieval {
 		queries.read(config.get("queries"));
 		
 		int limit = Integer.parseInt(args[1]);
-		DocumentClusterReader clustersReader = new DocumentClusterReader(new File(config.get("document-entities-file")), limit);
-		RelatedDocs clusters = clustersReader.getClusters();
+		RelatedDocs clusters = (new DocumentClusterReader(new File(config.get("document-entities-file")), limit)).getClusters();
 		
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));

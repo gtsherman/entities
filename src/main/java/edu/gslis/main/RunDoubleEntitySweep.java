@@ -58,8 +58,7 @@ public class RunDoubleEntitySweep {
 			numDocs = Integer.parseInt(config.get("num-docs"));
 		}
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
-		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
+		SearchHitsBatch initialHitsBatch = (new SearchResultsReader(new File(config.get("initial-hits")), index)).getBatchResults();
 		
 		String entityProbsPath = config.get("for-query-probs");
 		String outDir = config.get("double-entity-sweep-dir"); 
