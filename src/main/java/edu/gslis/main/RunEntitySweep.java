@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import edu.gslis.entities.docscoring.creators.FileLookupDocScorerCreator;
+import edu.gslis.entities.docscoring.FileLookupDocScorer;
 import edu.gslis.evaluation.running.runners.EntityRunner;
 import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
@@ -53,12 +53,12 @@ public class RunEntitySweep {
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("singleEntity", outputWriter);
 
-		FileLookupDocScorerCreator docScorerCreator = new FileLookupDocScorerCreator(entityProbsPath + 
+		FileLookupDocScorer docScorer = new FileLookupDocScorer(entityProbsPath + 
 				File.separator + "docProbsNew");
-		FileLookupDocScorerCreator expansionDocScorerCreator = new FileLookupDocScorerCreator(entityProbsPath + 
+		FileLookupDocScorer expansionDocScorer = new FileLookupDocScorer(entityProbsPath + 
 				File.separator + "entityProbs" + entityModel + "New.10");
 		
-		EntityRunner runner = new EntityRunner(initialHitsBatch, stopper, docScorerCreator, expansionDocScorerCreator);
+		EntityRunner runner = new EntityRunner(initialHitsBatch, stopper, docScorer, expansionDocScorer);
 		
 		Map<String, Double> params = new HashMap<String, Double>();
 		

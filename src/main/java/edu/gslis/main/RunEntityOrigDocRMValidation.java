@@ -4,12 +4,11 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Set;
 
-import edu.gslis.docscoring.support.PrefetchedCollectionStats;
-import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
+import edu.gslis.docscoring.support.CollectionStats;
+import edu.gslis.docscoring.support.IndexBackedCollectionStats;
+import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
@@ -20,10 +19,9 @@ import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
-import edu.gslis.queries.GQuery;
 import edu.gslis.related_docs.DocumentClusterReader;
 import edu.gslis.related_docs.RelatedDocs;
-import edu.gslis.scoring.creators.DirichletDocScorerCreator;
+import edu.gslis.scoring.DirichletDocScorer;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
@@ -52,16 +50,8 @@ public class RunEntityOrigDocRMValidation {
 		
 		RelatedDocs expansionClusters = (new DocumentClusterReader(new File(config.get("document-entities-file")))).getClusters();
 
-		Set<String> terms = new HashSet<String>();
-		Iterator<GQuery> queryIt = queries.iterator();
-		while (queryIt.hasNext()) {
-			GQuery query = queryIt.next();
-			Iterator<String> featureIt = query.getFeatureVector().iterator();
-			while (featureIt.hasNext()) {
-				terms.add(featureIt.next());
-			}
-		}
-		PrefetchedCollectionStats cs = new PrefetchedCollectionStats(config.get("index"), terms);
+		CollectionStats cs = new IndexBackedCollectionStats();
+		cs.setStatSource(config.get("index"));
 
 		Evaluator evaluator = new MAPEvaluator(qrels);
 		if (targetMetric.equalsIgnoreCase("ndcg")) {
@@ -72,10 +62,10 @@ public class RunEntityOrigDocRMValidation {
 
 		long seed = Long.parseLong(args[1]);
 		
-		DirichletDocScorerCreator docScorerCreator = new DirichletDocScorerCreator(cs, false);
-		ExpansionDocsDocScorerCreator expansionScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, expansionClusters, false);
+		DirichletDocScorer docScorer = new DirichletDocScorer(cs);
+		ExpansionDocsDocScorer expansionScorer = new ExpansionDocsDocScorer(wikiIndex, expansionClusters);
 
-		EntityOrigDocRMRunner runner = new EntityOrigDocRMRunner(initialHitsBatch, stopper, rmDir, docScorerCreator, expansionScorerCreator);
+		EntityOrigDocRMRunner runner = new EntityOrigDocRMRunner(initialHitsBatch, stopper, rmDir, docScorer, expansionScorer);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);

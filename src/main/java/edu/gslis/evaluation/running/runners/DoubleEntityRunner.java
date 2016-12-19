@@ -11,7 +11,6 @@ import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
 import edu.gslis.scoring.DocScorer;
 import edu.gslis.scoring.InterpolatedDocScorer;
-import edu.gslis.scoring.creators.DocScorerCreator;
 import edu.gslis.scoring.queryscoring.QueryLikelihoodQueryScorer;
 import edu.gslis.scoring.queryscoring.QueryScorer;
 import edu.gslis.searchhits.SearchHit;
@@ -27,20 +26,20 @@ public class DoubleEntityRunner implements QueryRunner {
 
 	private SearchHitsBatch initialResultsBatch;
 	private Stopper stopper;
-	private DocScorerCreator docScorerCreator;
-	private DocScorerCreator selfExpansionScorerCreator;
-	private DocScorerCreator wikiExpansionScorerCreator;
+	private DocScorer docScorer;
+	private DocScorer selfExpansionScorer;
+	private DocScorer wikiExpansionScorer;
 	
 	private ParameterizedResults processedQueries = new ParameterizedResults();
 	
 	public DoubleEntityRunner(SearchHitsBatch initialResultsBatch, Stopper stopper,
-			DocScorerCreator docScorerCreator, DocScorerCreator selfExpansionScorerCreator,
-			DocScorerCreator wikiExpansionScorerCreator) {
+			DocScorer docScorer, DocScorer selfExpansionScorer,
+			DocScorer wikiExpansionScorer) {
 		this.initialResultsBatch = initialResultsBatch;
 		this.stopper = stopper;
-		this.docScorerCreator = docScorerCreator;
-		this.selfExpansionScorerCreator = selfExpansionScorerCreator;
-		this.wikiExpansionScorerCreator = wikiExpansionScorerCreator;
+		this.docScorer = docScorer;
+		this.selfExpansionScorer = selfExpansionScorer;
+		this.wikiExpansionScorer = wikiExpansionScorer;
 	}
 	
 	@Override
@@ -112,20 +111,16 @@ public class DoubleEntityRunner implements QueryRunner {
 				newHit.setDocno(doc.getDocno());
 				newHit.setQueryName(query.getTitle());
 
-				DocScorer docScorer = docScorerCreator.getDocScorer(newHit);
-				DocScorer wikiDocScorer = wikiExpansionScorerCreator.getDocScorer(newHit);
-				DocScorer selfDocScorer = selfExpansionScorerCreator.getDocScorer(newHit);
-				
 				Map<DocScorer, Double> scorerWeights = new HashMap<DocScorer, Double>();
 				scorerWeights.put(docScorer, params.get(DOCUMENT_WEIGHT));
-				scorerWeights.put(wikiDocScorer, params.get(WIKI_WEIGHT));
-				scorerWeights.put(selfDocScorer, params.get(SELF_WEIGHT));
+				scorerWeights.put(wikiExpansionScorer, params.get(WIKI_WEIGHT));
+				scorerWeights.put(selfExpansionScorer, params.get(SELF_WEIGHT));
 				
 				DocScorer interpolatedScorer = new InterpolatedDocScorer(scorerWeights);
 				
 				QueryScorer queryScorer = new QueryLikelihoodQueryScorer(interpolatedScorer);
 			
-				newHit.setScore(queryScorer.scoreQuery(query));
+				newHit.setScore(queryScorer.scoreQuery(query, doc));
 				processedHits.add(newHit);
 			}
 			

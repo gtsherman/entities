@@ -3,17 +3,23 @@ package edu.gslis.evaluation.running.runners;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
-import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
-import edu.gslis.entities.docscoring.expansion.SingleExpansionRM1Builder;
+import org.apache.commons.collections.keyvalue.MultiKey;
+
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+
+import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.entities.docscoring.expansion.ExpansionRM3Builder;
+import edu.gslis.entities.docscoring.expansion.SingleExpansionRM1Builder;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
-import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
 import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
-import edu.gslis.scoring.creators.DirichletDocScorerCreator;
+import edu.gslis.scoring.DirichletDocScorer;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
@@ -22,22 +28,65 @@ import edu.gslis.utils.Stopper;
 public class EntityRMRunner implements QueryRunner {
 	
 	private final int trainingNumResults = 100;
+	private final int QUERY_KEY_INDEX = 0;
+	private final int NUMRESULTS_KEY_INDEX = 1;
+	private final int PARAMS_KEY_INDEX = 2;
 	
 	private IndexWrapper targetIndex;
 	private SearchHitsBatch initialResultsBatch;
 	private Stopper stopper;
-	private DirichletDocScorerCreator docScorerCreator;
-	private ExpansionDocsDocScorerCreator expansionScorerCreator;
+	private DirichletDocScorer docScorer;
+	private ExpansionDocsDocScorer expansionScorer;
 		
-	private ParameterizedResults processedQueries = new ParameterizedResults();
+	private LoadingCache<MultiKey, SearchHits> processedQueries = CacheBuilder.newBuilder()
+			.softValues()
+			.build(
+					new CacheLoader<MultiKey, SearchHits>() {
+						public SearchHits load(MultiKey key) throws Exception {
+							GQuery query = (GQuery) key.getKey(QUERY_KEY_INDEX);
+							int numResults = (Integer) key.getKey(NUMRESULTS_KEY_INDEX);
+							@SuppressWarnings("unchecked")
+							Map<String, Double> params = (Map<String, Double>) key.getKey(PARAMS_KEY_INDEX);
+							
+							query.applyStopper(stopper);
+							
+							int fbDocs = 20;
+							if (params.containsKey(RMRunner.FEEDBACK_DOCUMENTS)) {
+								fbDocs = params.get(RMRunner.FEEDBACK_DOCUMENTS).intValue();
+							}
+							int fbTerms = 20;
+							if (params.containsKey(RMRunner.FEEDBACK_TERMS)) {
+								params.get(RMRunner.FEEDBACK_TERMS).intValue();
+							}
+
+							SearchHits initialHits = getInitialHits(query);
+							
+							SingleExpansionRM1Builder rm1 = new SingleExpansionRM1Builder(query, initialHits, docScorer, expansionScorer, fbDocs, fbTerms);
+							ExpansionRM3Builder rm3 = new ExpansionRM3Builder(query, rm1);
+							FeatureVector rm3Vector = rm3.buildRelevanceModel(stopper, params);
+							
+							System.err.println("RM3 for query "+query.getTitle()+" ("+query.getText()+"):");
+							System.err.println(rm3Vector.toString(10));
+
+							FeatureVector origQueryVec = query.getFeatureVector();
+							query.setFeatureVector(rm3Vector);
+							
+							// Run the new query against the target index
+							SearchHits results = targetIndex.runQuery(query, numResults);
+							
+							query.setFeatureVector(origQueryVec);
+							
+							return results;
+						}
+					});
 	
 	public EntityRMRunner(IndexWrapper targetIndex, SearchHitsBatch initialResultsBatch, Stopper stopper,
-			DirichletDocScorerCreator docScorerCreator, ExpansionDocsDocScorerCreator expansionScorerCreator) {
+			DirichletDocScorer docScorer, ExpansionDocsDocScorer expansionScorer) {
 		this.targetIndex = targetIndex;
 		this.initialResultsBatch = initialResultsBatch;
 		this.stopper = stopper;
-		this.docScorerCreator = docScorerCreator;
-		this.expansionScorerCreator = expansionScorerCreator;
+		this.docScorer = docScorer;
+		this.expansionScorer = expansionScorer;
 	}
 
 	@Override
@@ -61,28 +110,7 @@ public class EntityRMRunner implements QueryRunner {
 				System.err.println("\t\tParameters: "+origWeight+" (doc), "+expansionWeight+" (expansion), "+lam+" (mixing)");
 				SearchHitsBatch batchResults = run(queries, trainingNumResults, currentParams);
 
-				//double metricVal = evaluator.evaluate(batchResults);
-				double metricVal = 0.0;
-				
-				Iterator<String> queryIt = batchResults.queryIterator();
-				while (queryIt.hasNext()) {
-					String query = queryIt.next();
-					GQuery gquery = new GQuery();
-					gquery.setTitle(query);
-
-					if (processedQueries.scoreExists(gquery, getParamVals(currentParams, trainingNumResults))) {
-						metricVal += processedQueries.getScore(gquery, getParamVals(currentParams, trainingNumResults));
-					} else {
-						SearchHitsBatch q = new SearchHitsBatch();
-						q.setSearchHits(gquery, batchResults.getSearchHits(query));
-
-						double score = evaluator.evaluate(q);
-						processedQueries.setScore(score, gquery, getParamVals(currentParams, trainingNumResults));
-
-						metricVal += score;
-					}
-				}
-				metricVal /= batchResults.getNumQueries();
+				double metricVal = evaluator.evaluate(batchResults);
 				
 				System.err.println("\t\tScore: "+metricVal);
 				if (metricVal > maxMetric) {
@@ -114,49 +142,23 @@ public class EntityRMRunner implements QueryRunner {
 	}
 	
 	private SearchHits getProcessedQuery(GQuery query, int numResults, Map<String, Double> params) {
-		double[] paramVals = getParamVals(params, numResults);
-
-		if (!processedQueries.resultsExist(query, paramVals)) {
-			query.applyStopper(stopper);
-			
-			int fbDocs = 20;
-			if (params.containsKey(RMRunner.FEEDBACK_DOCUMENTS)) {
-				fbDocs = params.get(RMRunner.FEEDBACK_DOCUMENTS).intValue();
-			}
-			int fbTerms = 20;
-			if (params.containsKey(RMRunner.FEEDBACK_TERMS)) {
-				params.get(RMRunner.FEEDBACK_TERMS).intValue();
-			}
-
-			SearchHits initialHits = getInitialHits(query);
-			
-			SingleExpansionRM1Builder rm1 = new SingleExpansionRM1Builder(query, initialHits, docScorerCreator, expansionScorerCreator, fbDocs, fbTerms);
-			ExpansionRM3Builder rm3 = new ExpansionRM3Builder(query, rm1);
-			FeatureVector rm3Vector = rm3.buildRelevanceModel(stopper, params);
-			
-			System.err.println("RM3 for query "+query.getTitle()+" ("+query.getText()+"):");
-			System.err.println(rm3Vector.toString(10));
-
-			GQuery newQuery = new GQuery();
-			newQuery.setTitle(query.getTitle());
-			newQuery.setFeatureVector(rm3Vector);
-			
-			// Run the new query against the target index
-			SearchHits results = targetIndex.runQuery(newQuery, numResults);
-			
-			// Add the results to our processed queries map
-			processedQueries.addResults(results, query, paramVals);
+		Object[] keys = new Object[3];
+		keys[QUERY_KEY_INDEX] = query;
+		keys[NUMRESULTS_KEY_INDEX] = numResults;
+		keys[PARAMS_KEY_INDEX] = params;
+		
+		MultiKey key = new MultiKey(keys);
+		
+		// Lookup in cache
+		try {
+			return processedQueries.get(key);
+		} catch (ExecutionException e) {
+			System.err.println("Error scoring query " + query.getTitle());
+			System.err.println(e.getStackTrace());
 		}
-
-		return processedQueries.getResults(query, paramVals);
-	}
-	
-	private double[] getParamVals(Map<String, Double> params, int numResults) {
-		double[] paramsVals = {params.get(EntityRunner.DOCUMENT_WEIGHT),
-			params.get(EntityRunner.EXPANSION_WEIGHT),
-			params.get(RMRunner.ORIG_QUERY_WEIGHT),
-			numResults};
-		return paramsVals;
+		
+		// Default to zero, if we have an issue
+		return new SearchHits();
 	}
 	
 	private SearchHits getInitialHits(GQuery query) {

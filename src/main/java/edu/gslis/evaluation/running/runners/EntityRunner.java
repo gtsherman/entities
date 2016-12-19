@@ -11,7 +11,6 @@ import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
 import edu.gslis.scoring.DocScorer;
 import edu.gslis.scoring.InterpolatedDocScorer;
-import edu.gslis.scoring.creators.DocScorerCreator;
 import edu.gslis.scoring.queryscoring.QueryLikelihoodQueryScorer;
 import edu.gslis.scoring.queryscoring.QueryScorer;
 import edu.gslis.searchhits.SearchHit;
@@ -28,17 +27,17 @@ public class EntityRunner implements QueryRunner {
 
 	private SearchHitsBatch initialResultsBatch;
 	private Stopper stopper;
-	private DocScorerCreator docScorerCreator;
-	private DocScorerCreator expansionDocScorerCreator;
+	private DocScorer docScorer;
+	private DocScorer expansionDocScorer;
 
 	private ParameterizedResults processedQueries = new ParameterizedResults();
 	
 	public EntityRunner(SearchHitsBatch initialResultsBatch, Stopper stopper,
-			DocScorerCreator docScorerCreator, DocScorerCreator expansionDocScorerCreator) {
+			DocScorer docScorer, DocScorer expansionDocScorer) {
 		this.initialResultsBatch = initialResultsBatch;
 		this.stopper = stopper;
-		this.docScorerCreator = docScorerCreator;
-		this.expansionDocScorerCreator = expansionDocScorerCreator;
+		this.docScorer = docScorer;
+		this.expansionDocScorer = expansionDocScorer;
 	}
 	
 	@Override
@@ -103,9 +102,6 @@ public class EntityRunner implements QueryRunner {
 				newDoc.setDocno(doc.getDocno());
 				newDoc.setQueryName(query.getTitle());
 
-				DocScorer docScorer = docScorerCreator.getDocScorer(newDoc);
-				DocScorer expansionDocScorer = expansionDocScorerCreator.getDocScorer(newDoc);
-
 				Map<DocScorer, Double> scorerWeights = new HashMap<DocScorer, Double>();
 				scorerWeights.put(docScorer, params.get(DOCUMENT_WEIGHT));
 				scorerWeights.put(expansionDocScorer, params.get(EXPANSION_WEIGHT));
@@ -114,7 +110,7 @@ public class EntityRunner implements QueryRunner {
 				
 				QueryScorer queryScorer = new QueryLikelihoodQueryScorer(interpolatedScorer);
 				
-				newDoc.setScore(queryScorer.scoreQuery(query));
+				newDoc.setScore(queryScorer.scoreQuery(query, doc));
 				processedHits.add(newDoc);
 			}
 			

@@ -84,8 +84,8 @@ public class RunEntityBackedRetrieval {
 			while (hitIt.hasNext()) {
 				SearchHit hit = new IndexBackedSearchHit(index, hitIt.next());
 			
-				DocScorer hitScorer = new DirichletDocScorer(mu, hit, cs);
-				DocScorer expansionScorer = new ExpansionDocsDocScorer(hit, wikiIndex, clusters);
+				DocScorer hitScorer = new DirichletDocScorer(mu, cs);
+				DocScorer expansionScorer = new ExpansionDocsDocScorer(wikiIndex, clusters);
 
 				Map<DocScorer, Double> scorerWeights = new HashMap<DocScorer, Double>();
 				scorerWeights.put(hitScorer, origQueryWeight);
@@ -94,7 +94,7 @@ public class RunEntityBackedRetrieval {
 				InterpolatedDocScorer docScorer = new InterpolatedDocScorer(scorerWeights);
 				
 				QueryScorer scorer = new QueryLikelihoodQueryScorer(docScorer);
-				hit.setScore(scorer.scoreQuery(query));
+				hit.setScore(scorer.scoreQuery(query, hit));
 			}
 			hits.rank();
 			output.write(hits, query.getTitle());

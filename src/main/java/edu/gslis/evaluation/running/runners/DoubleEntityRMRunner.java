@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
+import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.entities.docscoring.expansion.ExpansionRM3Builder;
 import edu.gslis.entities.docscoring.expansion.MultiExpansionRM1Builder;
 import edu.gslis.evaluation.evaluators.Evaluator;
@@ -13,7 +13,7 @@ import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
 import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
-import edu.gslis.scoring.creators.DirichletDocScorerCreator;
+import edu.gslis.scoring.DirichletDocScorer;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
@@ -26,21 +26,21 @@ public class DoubleEntityRMRunner implements QueryRunner {
 	private IndexWrapper targetIndex;
 	private SearchHitsBatch initialResultsBatch;
 	private Stopper stopper;
-	private DirichletDocScorerCreator docScorerCreator;
-	private ExpansionDocsDocScorerCreator selfExpansionScorerCreator;
-	private ExpansionDocsDocScorerCreator wikiExpansionScorerCreator;
+	private DirichletDocScorer docScorer;
+	private ExpansionDocsDocScorer selfExpansionScorer;
+	private ExpansionDocsDocScorer wikiExpansionScorer;
 		
 	private ParameterizedResults processedQueries = new ParameterizedResults();
 	
 	public DoubleEntityRMRunner(IndexWrapper targetIndex, SearchHitsBatch initialResultsBatch, Stopper stopper,
-			DirichletDocScorerCreator docScorerCreator, ExpansionDocsDocScorerCreator selfExpansionScorerCreator,
-			ExpansionDocsDocScorerCreator wikiExpansionScorerCreator) {
+			DirichletDocScorer docScorer, ExpansionDocsDocScorer selfExpansionScorer,
+			ExpansionDocsDocScorer wikiExpansionScorer) {
 		this.targetIndex = targetIndex;
 		this.initialResultsBatch = initialResultsBatch;
 		this.stopper = stopper;
-		this.docScorerCreator = docScorerCreator;
-		this.selfExpansionScorerCreator = selfExpansionScorerCreator;
-		this.wikiExpansionScorerCreator = wikiExpansionScorerCreator;
+		this.docScorer = docScorer;
+		this.selfExpansionScorer = selfExpansionScorer;
+		this.wikiExpansionScorer = wikiExpansionScorer;
 	}
 
 	@Override
@@ -139,7 +139,7 @@ public class DoubleEntityRMRunner implements QueryRunner {
 			
 			// Setup RM1 and RM3 builders
 			MultiExpansionRM1Builder rm1Builder = new MultiExpansionRM1Builder(query, initialHits,
-					docScorerCreator, selfExpansionScorerCreator, wikiExpansionScorerCreator,
+					docScorer, selfExpansionScorer, wikiExpansionScorer,
 					fbDocs, fbTerms);
 			ExpansionRM3Builder rm3Builder = new ExpansionRM3Builder(query, rm1Builder);
 			

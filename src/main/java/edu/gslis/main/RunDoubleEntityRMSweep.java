@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Set;
 
 import edu.gslis.docscoring.support.PrefetchedCollectionStats;
-import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
+import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.evaluation.running.runners.DoubleEntityRMRunner;
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
 import edu.gslis.evaluation.running.runners.RMRunner;
@@ -24,7 +24,7 @@ import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.related_docs.DocumentClusterReader;
 import edu.gslis.related_docs.RelatedDocs;
-import edu.gslis.scoring.creators.DirichletDocScorerCreator;
+import edu.gslis.scoring.DirichletDocScorer;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
@@ -61,12 +61,12 @@ public class RunDoubleEntityRMSweep {
 		
 		SearchHitsBatch initialHitsBatch = (new SearchResultsReader(new File(config.get("initial-hits")), index)).getBatchResults();
 
-		DirichletDocScorerCreator docScorerCreator = new DirichletDocScorerCreator(csSelf);
-		ExpansionDocsDocScorerCreator selfScorerCreator = new ExpansionDocsDocScorerCreator(index, selfClusters);
-		ExpansionDocsDocScorerCreator wikiScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, wikiClusters);
+		DirichletDocScorer docScorer = new DirichletDocScorer(csSelf);
+		ExpansionDocsDocScorer selfScorer = new ExpansionDocsDocScorer(index, selfClusters);
+		ExpansionDocsDocScorer wikiScorer = new ExpansionDocsDocScorer(wikiIndex, wikiClusters);
 
 		DoubleEntityRMRunner runner = new DoubleEntityRMRunner(index, initialHitsBatch, stopper,
-				docScorerCreator, selfScorerCreator, wikiScorerCreator);
+				docScorer, selfScorer, wikiScorer);
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("rm3", outputWriter);

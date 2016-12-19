@@ -9,7 +9,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 import edu.gslis.docscoring.support.PrefetchedCollectionStats;
-import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
+import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
@@ -23,7 +23,7 @@ import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.related_docs.DocumentClusterReader;
 import edu.gslis.related_docs.RelatedDocs;
-import edu.gslis.scoring.creators.DirichletDocScorerCreator;
+import edu.gslis.scoring.DirichletDocScorer;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
@@ -67,12 +67,12 @@ public class RunDoubleEntityRMValidation {
 
 		long seed = Long.parseLong(args[1]);
 		
-		DirichletDocScorerCreator docScorerCreator = new DirichletDocScorerCreator(csSelf);
-		ExpansionDocsDocScorerCreator selfScorerCreator = new ExpansionDocsDocScorerCreator(index, selfClusters);
-		ExpansionDocsDocScorerCreator wikiScorerCreator = new ExpansionDocsDocScorerCreator(wikiIndex, wikiClusters);
+		DirichletDocScorer docScorer = new DirichletDocScorer(csSelf);
+		ExpansionDocsDocScorer selfScorer = new ExpansionDocsDocScorer(index, selfClusters);
+		ExpansionDocsDocScorer wikiScorer = new ExpansionDocsDocScorer(wikiIndex, wikiClusters);
 
 		DoubleEntityRMRunner runner = new DoubleEntityRMRunner(index, initialHitsBatch, stopper,
-				docScorerCreator, selfScorerCreator, wikiScorerCreator);
+				docScorer, selfScorer, wikiScorer);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);

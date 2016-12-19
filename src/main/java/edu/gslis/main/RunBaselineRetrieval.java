@@ -12,10 +12,9 @@ import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
-import edu.gslis.scoring.creators.DirichletDocScorerCreator;
+import edu.gslis.scoring.DirichletDocScorer;
 import edu.gslis.scoring.queryscoring.QueryLikelihoodQueryScorer;
 import edu.gslis.scoring.queryscoring.QueryScorer;
-import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
@@ -42,9 +41,10 @@ public class RunBaselineRetrieval {
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 		
-		SearchHitsBatch batchResults = (new SearchResultsReader(new File(config.get("initial-hits")))).getBatchResults();
+		SearchHitsBatch batchResults = (new SearchResultsReader(new File(config.get("initial-hits")), index)).getBatchResults();
 		
-		DirichletDocScorerCreator ddsc = new DirichletDocScorerCreator(cs);
+		DirichletDocScorer docScorer = new DirichletDocScorer(cs);
+		QueryScorer scorer = new QueryLikelihoodQueryScorer(docScorer);
 
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("baseline", outputWriter);
@@ -61,10 +61,9 @@ public class RunBaselineRetrieval {
 
 			Iterator<SearchHit> hitIt = hits.iterator();
 			while (hitIt.hasNext()) {
-				SearchHit hit = new IndexBackedSearchHit(index, hitIt.next());
+				SearchHit hit = hitIt.next();
 
-				QueryScorer scorer = new QueryLikelihoodQueryScorer(ddsc.getDocScorer(hit));
-				double score = scorer.scoreQuery(query);
+				double score = scorer.scoreQuery(query, hit);
 				
 				hit.setScore(score);
 				rescored.add(hit);

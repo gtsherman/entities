@@ -73,13 +73,13 @@ public class PrecomputeClusterTermProbabilities {
 			while (hitIt.hasNext()) {
 				SearchHit doc = new IndexBackedSearchHit(index, hitIt.next());
 				
-				DocScorer expansionBatchScorer = new ExpansionDocsDocScorer(doc, wikiIndex, clusters);
+				DocScorer expansionBatchScorer = new ExpansionDocsDocScorer(wikiIndex, clusters);
 				try {
 					FileWriter out = new FileWriter(outDir + File.separator + doc.getDocno());
 					Iterator<String> qtermIt = query.getFeatureVector().iterator();
 					while (qtermIt.hasNext()) {
 						String term = qtermIt.next();
-						out.write(term + "\t" + expansionBatchScorer.scoreTerm(term) + "\n");
+						out.write(term + "\t" + expansionBatchScorer.scoreTerm(term, doc) + "\n");
 					}
 					out.close();
 				} catch (IOException e) {

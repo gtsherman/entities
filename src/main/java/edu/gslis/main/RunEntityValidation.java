@@ -6,7 +6,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 
-import edu.gslis.entities.docscoring.creators.FileLookupDocScorerCreator;
+import edu.gslis.entities.docscoring.FileLookupDocScorer;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
@@ -59,12 +59,12 @@ public class RunEntityValidation {
 			evaluator = new NDCGEvaluator(qrels);
 		}
 
-		FileLookupDocScorerCreator docScorerCreator = new FileLookupDocScorerCreator(forQueryProbs + 
+		FileLookupDocScorer docScorer = new FileLookupDocScorer(forQueryProbs + 
 				File.separator + "docProbsNew");
-		FileLookupDocScorerCreator expansionDocScorerCreator = new FileLookupDocScorerCreator(forQueryProbs + 
+		FileLookupDocScorer expansionDocScorer = new FileLookupDocScorer(forQueryProbs + 
 				File.separator + "entityProbs" + model + "New.10");
 		
-		EntityRunner runner = new EntityRunner(initialHitsBatch, stopper, docScorerCreator, expansionDocScorerCreator);
+		EntityRunner runner = new EntityRunner(initialHitsBatch, stopper, docScorer, expansionDocScorer);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);

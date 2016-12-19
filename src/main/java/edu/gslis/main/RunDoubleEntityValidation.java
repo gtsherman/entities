@@ -6,7 +6,7 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
 
-import edu.gslis.entities.docscoring.creators.FileLookupDocScorerCreator;
+import edu.gslis.entities.docscoring.FileLookupDocScorer;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
@@ -18,7 +18,7 @@ import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
-import edu.gslis.scoring.creators.DocScorerCreator;
+import edu.gslis.scoring.DocScorer;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
@@ -60,15 +60,15 @@ public class RunDoubleEntityValidation {
 		
 		long seed = Long.parseLong(args[1]);
 		
-		DocScorerCreator docScorerCreator = new FileLookupDocScorerCreator(forQueryProbs + 
+		DocScorer docScorer = new FileLookupDocScorer(forQueryProbs + 
 				File.separator + "docProbsNew");
-		DocScorerCreator wikiDocScorerCreator = new FileLookupDocScorerCreator(forQueryProbs + 
+		DocScorer wikiDocScorer = new FileLookupDocScorer(forQueryProbs + 
 				File.separator + "entityProbsWikiNew." + numEntities);
-		DocScorerCreator selfDocScorerCreator = new FileLookupDocScorerCreator(forQueryProbs + 
+		DocScorer selfDocScorer = new FileLookupDocScorer(forQueryProbs + 
 				File.separator + "entityProbsSelfNew." + numEntities);
 
 		DoubleEntityRunner runner = new DoubleEntityRunner(initialHitsBatch, stopper,
-				docScorerCreator, selfDocScorerCreator, wikiDocScorerCreator);
+				docScorer, selfDocScorer, wikiDocScorer);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);

@@ -4,16 +4,16 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
+import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.entities.docscoring.expansion.FileLookupRM1Builder;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
+import edu.gslis.scoring.DirichletDocScorer;
 import edu.gslis.scoring.DocScorer;
 import edu.gslis.scoring.InterpolatedDocScorer;
-import edu.gslis.scoring.creators.DirichletDocScorerCreator;
 import edu.gslis.scoring.expansion.RM1Builder;
 import edu.gslis.scoring.expansion.RM3Builder;
 import edu.gslis.scoring.queryscoring.QueryLikelihoodQueryScorer;
@@ -35,19 +35,19 @@ public class EntityOrigDocRMRunner implements QueryRunner {
 	
 	private SearchHitsBatch initialResultsBatch;
 	private Stopper stopper;
-	private DirichletDocScorerCreator docScorerCreator;
-	private ExpansionDocsDocScorerCreator expansionScorerCreator;
+	private DirichletDocScorer docScorer;
+	private ExpansionDocsDocScorer expansionScorer;
 	private String rmDir;
 		
 	private ParameterizedResults processedQueries = new ParameterizedResults();
 	
 	public EntityOrigDocRMRunner(SearchHitsBatch initialResultsBatch, Stopper stopper, String rmDir,
-			DirichletDocScorerCreator docScorerCreator, ExpansionDocsDocScorerCreator expansionScorerCreator) {
+			DirichletDocScorer docScorer, ExpansionDocsDocScorer expansionScorer) {
 		this.initialResultsBatch = initialResultsBatch;
 		this.stopper = stopper;
 		this.rmDir = rmDir;
-		this.docScorerCreator = docScorerCreator;
-		this.expansionScorerCreator = expansionScorerCreator;
+		this.docScorer = docScorer;
+		this.expansionScorer = expansionScorer;
 	}
 
 	@Override
@@ -134,6 +134,7 @@ public class EntityOrigDocRMRunner implements QueryRunner {
 			RM1Builder rm1 = new FileLookupRM1Builder(query, rmDir);
 			RM3Builder rm3 = new RM3Builder(query, rm1);
 			FeatureVector rm3Vector = rm3.buildRelevanceModel(params.get(RMRunner.ORIG_QUERY_WEIGHT));
+			rm3Vector.clip(20);
 			
 			System.err.println("RM3 for query "+query.getTitle()+" ("+query.getText()+"):");
 			System.err.println(rm3Vector.toString(10));
@@ -150,27 +151,23 @@ public class EntityOrigDocRMRunner implements QueryRunner {
 				SearchHit doc = hitIt.next();
 				i++;
 				
-				SearchHit newDoc = new SearchHit();
-				newDoc.setDocno(doc.getDocno());
-				newDoc.setFeatureVector(doc.getFeatureVector());
-
-				DocScorer docScorer = docScorerCreator.getDocScorer(newDoc);
-				DocScorer expansionDocScorer = expansionScorerCreator.getDocScorer(newDoc);
-
 				Map<DocScorer, Double> scorerWeights = new HashMap<DocScorer, Double>();
 				scorerWeights.put(docScorer, params.get(EntityRunner.DOCUMENT_WEIGHT));
-				scorerWeights.put(expansionDocScorer, params.get(EntityRunner.EXPANSION_WEIGHT));
+				scorerWeights.put(expansionScorer, params.get(EntityRunner.EXPANSION_WEIGHT));
 				DocScorer interpolatedScorer = new InterpolatedDocScorer(scorerWeights);
 				
 				QueryScorer queryScorer = new QueryLikelihoodQueryScorer(interpolatedScorer);
-				
-				newDoc.setScore(queryScorer.scoreQuery(query));
+
+				SearchHit newDoc = new SearchHit();
+				newDoc.setDocno(doc.getDocno());	
+				newDoc.setScore(queryScorer.scoreQuery(newQuery, doc));
+
 				processedHits.add(newDoc);
 			}
 			
 			processedHits.rank();
 			
-			if (numResults == 1000) {
+			if (numResults == 1000) { // i.e. if it's a test run, which we won't see again and so don't need to store
 				return processedHits;
 			}
 			

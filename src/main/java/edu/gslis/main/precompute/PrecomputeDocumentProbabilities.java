@@ -65,13 +65,13 @@ public class PrecomputeDocumentProbabilities {
 			while (hitIt.hasNext()) {
 				SearchHit doc = new IndexBackedSearchHit(index, hitIt.next());
 				
-				DocScorer docScorer = new DirichletDocScorer(doc, cs);
+				DocScorer docScorer = new DirichletDocScorer(cs);
 				try {
 					FileWriter out = new FileWriter(outDir+"/"+query.getTitle()+"/"+doc.getDocno());
 					Iterator<String> qit = query.getFeatureVector().iterator();
 					while (qit.hasNext()) {
 						String term = qit.next();
-						out.write(term + "\t" + docScorer.scoreTerm(term) + "\n");
+						out.write(term + "\t" + docScorer.scoreTerm(term, doc) + "\n");
 					}
 					out.close();
 				} catch (IOException e) {

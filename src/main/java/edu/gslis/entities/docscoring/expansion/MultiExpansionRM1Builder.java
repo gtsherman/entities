@@ -4,12 +4,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import edu.gslis.entities.docscoring.creators.ExpansionDocsDocScorerCreator;
+import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
 import edu.gslis.queries.GQuery;
+import edu.gslis.scoring.DirichletDocScorer;
 import edu.gslis.scoring.DocScorer;
 import edu.gslis.scoring.InterpolatedDocScorer;
-import edu.gslis.scoring.creators.DirichletDocScorerCreator;
 import edu.gslis.scoring.expansion.RelevanceModelScorer;
 import edu.gslis.scoring.queryscoring.QueryLikelihoodQueryScorer;
 import edu.gslis.scoring.queryscoring.QueryScorer;
@@ -29,26 +29,32 @@ public class MultiExpansionRM1Builder implements ExpansionRM1Builder {
 	
 	private GQuery query;
 	private SearchHits initialHits;
-	private DirichletDocScorerCreator docScorerCreator;
-	private ExpansionDocsDocScorerCreator selfExpansionScorerCreator;
-	private ExpansionDocsDocScorerCreator wikiExpansionScorerCreator;
+	private DirichletDocScorer docScorer;
+	private ExpansionDocsDocScorer selfExpansionScorer;
+	private ExpansionDocsDocScorer wikiExpansionScorer;
+	private DirichletDocScorer docScorerZeroMu;
+	private ExpansionDocsDocScorer selfExpansionScorerZeroMu;
+	private ExpansionDocsDocScorer wikiExpansionScorerZeroMu;
 	
 	public MultiExpansionRM1Builder(GQuery query, SearchHits initialHits, 
-			DirichletDocScorerCreator docScorerCreator, ExpansionDocsDocScorerCreator selfExpansionScorerCreator,
-			ExpansionDocsDocScorerCreator wikiExpansionScorerCreator, int feedbackDocs, int feedbackTerms) {
-		this.docScorerCreator = docScorerCreator;
-		this.selfExpansionScorerCreator = selfExpansionScorerCreator;
-		this.wikiExpansionScorerCreator = wikiExpansionScorerCreator;
+			DirichletDocScorer docScorer, ExpansionDocsDocScorer selfExpansionScorer,
+			ExpansionDocsDocScorer wikiExpansionScorer, int feedbackDocs, int feedbackTerms) {
+		this.docScorer = docScorer;
+		this.selfExpansionScorer = selfExpansionScorer;
+		this.wikiExpansionScorer = wikiExpansionScorer;
+		this.docScorerZeroMu = new DirichletDocScorer(0, docScorer.getCollectionStats());
+		this.selfExpansionScorerZeroMu = new ExpansionDocsDocScorer(0, selfExpansionScorer.getExpansionIndex(), selfExpansionScorer.getClusters());
+		this.wikiExpansionScorerZeroMu = new ExpansionDocsDocScorer(0, wikiExpansionScorer.getExpansionIndex(), wikiExpansionScorer.getClusters());
 		setFeedbackDocs(feedbackDocs);
 		setFeedbackTerms(feedbackTerms);
 		setQuery(query, initialHits);
 	}
 	
 	public MultiExpansionRM1Builder(GQuery query, SearchHits initialHits,
-			DirichletDocScorerCreator docScorerCreator, ExpansionDocsDocScorerCreator selfExpansionScorerCreator,
-			ExpansionDocsDocScorerCreator wikiExpansionScorerCreator) {
-		this(query, initialHits, docScorerCreator, selfExpansionScorerCreator,
-				wikiExpansionScorerCreator, DEFAULT_FEEDBACK_DOCS, DEFAULT_FEEDBACK_TERMS);
+			DirichletDocScorer docScorer, ExpansionDocsDocScorer selfExpansionScorer,
+			ExpansionDocsDocScorer wikiExpansionScorer) {
+		this(query, initialHits, docScorer, selfExpansionScorer,
+				wikiExpansionScorer, DEFAULT_FEEDBACK_DOCS, DEFAULT_FEEDBACK_TERMS);
 	}
 	
 	public void setFeedbackDocs(int feedbackDocs) {
@@ -77,40 +83,22 @@ public class MultiExpansionRM1Builder implements ExpansionRM1Builder {
 			SearchHit hit = hitIt.next();
 			i++;
 			
-			// Prep the scorers
-			// Set mu to whatever the client provided, since it will be set to 0 after each hit is scored
-			docScorerCreator.setMu(-1);
-			selfExpansionScorerCreator.setMu(-1);
-			wikiExpansionScorerCreator.setMu(-1);
-			DocScorer docScorer = docScorerCreator.getDocScorer(hit);
-			DocScorer selfScorer = selfExpansionScorerCreator.getDocScorer(hit);
-			DocScorer wikiScorer = wikiExpansionScorerCreator.getDocScorer(hit);
-			
 			// Combine into an interpolated scorer
 			Map<DocScorer, Double> docScorers = new HashMap<DocScorer, Double>();
 			docScorers.put(docScorer, params.get(DoubleEntityRunner.DOCUMENT_WEIGHT));
-			docScorers.put(selfScorer, params.get(DoubleEntityRunner.SELF_WEIGHT));
-			docScorers.put(wikiScorer, params.get(DoubleEntityRunner.WIKI_WEIGHT));
+			docScorers.put(selfExpansionScorer, params.get(DoubleEntityRunner.SELF_WEIGHT));
+			docScorers.put(wikiExpansionScorer, params.get(DoubleEntityRunner.WIKI_WEIGHT));
 			DocScorer interpolatedScorer = new InterpolatedDocScorer(docScorers);
 			
 			// Score the query
 			QueryScorer queryScorer = new QueryLikelihoodQueryScorer(interpolatedScorer);
-			double queryScore = Math.exp(queryScorer.scoreQuery(query));
-			
-			// Prep the 0-mu scorers
-			// This is important because RM1 performs much better with mu == 0 for non-query terms
-			docScorerCreator.setMu(0);
-			selfExpansionScorerCreator.setMu(0);
-			wikiExpansionScorerCreator.setMu(0);
-			docScorer = docScorerCreator.getDocScorer(hit);
-			selfScorer = selfExpansionScorerCreator.getDocScorer(hit);
-			wikiScorer = wikiExpansionScorerCreator.getDocScorer(hit);
+			double queryScore = Math.exp(queryScorer.scoreQuery(query, hit));
 			
 			// Combine into an interpolated scorer
 			docScorers = new HashMap<DocScorer, Double>();
-			docScorers.put(docScorer, params.get(DoubleEntityRunner.DOCUMENT_WEIGHT));
-			docScorers.put(selfScorer, params.get(DoubleEntityRunner.SELF_WEIGHT));
-			docScorers.put(wikiScorer, params.get(DoubleEntityRunner.WIKI_WEIGHT));
+			docScorers.put(docScorerZeroMu, params.get(DoubleEntityRunner.DOCUMENT_WEIGHT));
+			docScorers.put(selfExpansionScorerZeroMu, params.get(DoubleEntityRunner.SELF_WEIGHT));
+			docScorers.put(wikiExpansionScorerZeroMu, params.get(DoubleEntityRunner.WIKI_WEIGHT));
 			interpolatedScorer = new InterpolatedDocScorer(docScorers);	
 			
 			DocScorer rmScorer = new RelevanceModelScorer(interpolatedScorer, queryScore);
@@ -122,9 +110,9 @@ public class MultiExpansionRM1Builder implements ExpansionRM1Builder {
 				}
 				terms.addTerm(term, hit.getFeatureVector().getFeatureWeight(term));
 			}
-			if (wikiExpansionScorerCreator.getClusters().getDocsRelatedTo(hit) != null) {
-				for (String docno : wikiExpansionScorerCreator.getClusters().getDocsRelatedTo(hit).keySet()) {
-					SearchHit expansionHit = new IndexBackedSearchHit(wikiExpansionScorerCreator.getIndex());
+			if (wikiExpansionScorer.getClusters().getDocsRelatedTo(hit) != null) {
+				for (String docno : wikiExpansionScorer.getClusters().getDocsRelatedTo(hit).keySet()) {
+					SearchHit expansionHit = new IndexBackedSearchHit(wikiExpansionScorer.getExpansionIndex());
 					expansionHit.setDocno(docno);
 					for (String term : expansionHit.getFeatureVector().getFeatures()) {
 						if (stopper != null && stopper.isStopWord(term)) {
@@ -134,9 +122,9 @@ public class MultiExpansionRM1Builder implements ExpansionRM1Builder {
 					}
 				}
 			}
-			if (selfExpansionScorerCreator.getClusters().getDocsRelatedTo(hit) != null) {
-				for (String docno : selfExpansionScorerCreator.getClusters().getDocsRelatedTo(hit).keySet()) {
-					SearchHit expansionHit = new IndexBackedSearchHit(selfExpansionScorerCreator.getIndex());
+			if (selfExpansionScorer.getClusters().getDocsRelatedTo(hit) != null) {
+				for (String docno : selfExpansionScorer.getClusters().getDocsRelatedTo(hit).keySet()) {
+					SearchHit expansionHit = new IndexBackedSearchHit(selfExpansionScorer.getExpansionIndex());
 					expansionHit.setDocno(docno);
 					for (String term : expansionHit.getFeatureVector().getFeatures()) {
 						if (stopper != null && stopper.isStopWord(term)) {
@@ -150,7 +138,7 @@ public class MultiExpansionRM1Builder implements ExpansionRM1Builder {
 			Iterator<String> termit = terms.iterator();
 			while (termit.hasNext()) {
 				String term = termit.next();
-				termScores.addTerm(term, rmScorer.scoreTerm(term));
+				termScores.addTerm(term, rmScorer.scoreTerm(term, hit));
 			}
 		}
 

@@ -5,6 +5,7 @@ import java.util.Map;
 
 import edu.gslis.readers.QueryProbabilityReader;
 import edu.gslis.scoring.DocScorer;
+import edu.gslis.searchhits.SearchHit;
 
 public class FileLookupDocScorer implements DocScorer {
 	
@@ -20,7 +21,7 @@ public class FileLookupDocScorer implements DocScorer {
 	}
 
 	@Override
-	public double scoreTerm(String term) {
+	public double scoreTerm(String term, SearchHit doc) {
 		if (!termProbs.containsKey(term)) {
 			termProbs.put(term, 0.0);
 		}

@@ -12,14 +12,14 @@ import java.util.Map;
 
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
-import edu.gslis.entities.docscoring.creators.FileLookupDocScorerCreator;
+import edu.gslis.entities.docscoring.FileLookupDocScorer;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
 import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
-import edu.gslis.scoring.creators.DocScorerCreator;
+import edu.gslis.scoring.DocScorer;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
@@ -66,15 +66,15 @@ public class RunDoubleEntitySweep {
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("doubleEntity", outputWriter);
 		
-		DocScorerCreator docScorerCreator = new FileLookupDocScorerCreator(entityProbsPath + 
+		DocScorer docScorer = new FileLookupDocScorer(entityProbsPath + 
 				File.separator + "docProbsNew");
-		DocScorerCreator wikiDocScorerCreator = new FileLookupDocScorerCreator(entityProbsPath + 
+		DocScorer wikiDocScorer = new FileLookupDocScorer(entityProbsPath + 
 				File.separator + "entityProbsWikiNew." + numEntities);
-		DocScorerCreator selfDocScorerCreator = new FileLookupDocScorerCreator(entityProbsPath + 
+		DocScorer selfDocScorer = new FileLookupDocScorer(entityProbsPath + 
 				File.separator + "entityProbsSelfNew." + numEntities);
 
 		QueryRunner runner = new DoubleEntityRunner(initialHitsBatch, stopper,
-				docScorerCreator, selfDocScorerCreator, wikiDocScorerCreator);
+				docScorer, selfDocScorer, wikiDocScorer);
 		
 		Map<String, Double> params = new HashMap<String, Double>();
 		
