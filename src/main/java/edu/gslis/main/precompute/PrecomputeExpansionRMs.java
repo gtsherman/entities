@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+import edu.gslis.docscoring.support.CollectionStats;
+import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
@@ -19,6 +21,7 @@ import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
 import edu.gslis.utils.readers.SearchResultsReader;
+import edu.gslis.utils.retrieval.QueryResults;
 
 public class PrecomputeExpansionRMs {
 	
@@ -30,6 +33,9 @@ public class PrecomputeExpansionRMs {
 		IndexWrapperIndriImpl wikiIndex = null;
 		if (config.get("wiki-index") != null)
 			wikiIndex = new IndexWrapperIndriImpl(config.get("wiki-index"));
+		
+		CollectionStats cs = new IndexBackedCollectionStats();
+		cs.setStatSource(config.get("wiki-index"));
 		
 		Stopper stopper = null;
 		if (config.get("stoplist") != null)
@@ -59,8 +65,11 @@ public class PrecomputeExpansionRMs {
 				query.applyStopper(stopper);
 				query.getFeatureVector().clip(20);
 				
-				RM1Builder rm1 = new StandardRM1Builder(query, wikiIndex, numEntities, 20);
-				FeatureVector rmVec = rm1.buildRelevanceModel(stopper);
+				QueryResults queryResults = new QueryResults(query,
+						wikiIndex.runQuery(query, numEntities));
+				
+				RM1Builder rm1 = new StandardRM1Builder(numEntities, 20, cs);
+				FeatureVector rmVec = rm1.buildRelevanceModel(queryResults, stopper);
 				
 				System.out.println(rmVec.toString(10));
 				

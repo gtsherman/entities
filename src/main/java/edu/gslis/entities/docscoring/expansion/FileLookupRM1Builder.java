@@ -24,20 +24,17 @@ public class FileLookupRM1Builder implements RM1Builder {
 		this.basePath = basePath;
 	}
 	
-	public void setQuery(GQuery query) {
-		this.query = query;
-	}
-	
 	public void setFeedbackTerms(int fbTerms) {
 		this.fbTerms = fbTerms;
 	}
 	
-	public FeatureVector buildRelevanceModel() {
-		return buildRelevanceModel(null);
+	public FeatureVector buildRelevanceModel(QueryResults queryResults) {
+		return buildRelevanceModel(queryResults, null);
 	}
 	
-	public FeatureVector buildRelevanceModel(Stopper stopper) {
-		RelevanceModelReader rmReader = new RelevanceModelReader(new File(basePath + File.separator + query.getTitle()));
+	public FeatureVector buildRelevanceModel(QueryResults queryResults, Stopper stopper) {
+		RelevanceModelReader rmReader = new RelevanceModelReader(new File(basePath +
+				File.separator + queryResults.getQuery().getTitle()));
 		FeatureVector rmVec = rmReader.getFeatureVector();
 		if (stopper != null) {
 			Iterator<String> termit = rmVec.iterator();

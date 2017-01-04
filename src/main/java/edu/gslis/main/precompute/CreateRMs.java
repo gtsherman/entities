@@ -18,6 +18,7 @@ import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
 import edu.gslis.utils.readers.SearchResultsReader;
+import edu.gslis.utils.retrieval.QueryResults;
 
 public class CreateRMs {
 
@@ -60,10 +61,12 @@ public class CreateRMs {
 			if (query.getFeatureVector().getLength() == 0) {
 				continue;
 			}
-
+			
+			QueryResults queryResults = new QueryResults(query, batchResults.getSearchHits(query));
+			
 			// RM1 built on target index
-			RM1Builder rm1 = new StandardRM1Builder(query, batchResults.getSearchHits(query), fbDocs, fbTerms, collectionStats);
-			FeatureVector rmVec = rm1.buildRelevanceModel(stopper);
+			RM1Builder rm1 = new StandardRM1Builder(fbDocs, fbTerms, collectionStats);
+			FeatureVector rmVec = rm1.buildRelevanceModel(queryResults, stopper);
 			rmVec.normalize();
 			
 			FileWriter out = new FileWriter(outDir + File.separator + query.getTitle());
