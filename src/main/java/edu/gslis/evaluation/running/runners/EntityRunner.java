@@ -6,7 +6,7 @@ import java.util.Map;
 
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
-import edu.gslis.evaluation.running.runners.support.ParameterizedResults;
+import edu.gslis.evaluation.running.runners.support.QueryParameters;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
 import edu.gslis.scoring.DocScorer;
@@ -18,7 +18,7 @@ import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 
-public class EntityRunner implements QueryRunner {
+public class EntityRunner extends QueryRunner {
 	
 	public static final String DOCUMENT_WEIGHT = "document";
 	public static final String EXPANSION_WEIGHT = "wiki";
@@ -30,8 +30,6 @@ public class EntityRunner implements QueryRunner {
 	private DocScorer docScorer;
 	private DocScorer expansionDocScorer;
 
-	private ParameterizedResults processedQueries = new ParameterizedResults();
-	
 	public EntityRunner(SearchHitsBatch initialResultsBatch, Stopper stopper,
 			DocScorer docScorer, DocScorer expansionDocScorer) {
 		this.initialResultsBatch = initialResultsBatch;
@@ -55,7 +53,7 @@ public class EntityRunner implements QueryRunner {
 			currentParams.put(EntityRunner.EXPANSION_WEIGHT, wikiWeight);
 				
 			System.err.println("\t\tParameters: " + origWeight + " (doc), " + wikiWeight + " (expansion)");
-			SearchHitsBatch batchResults = run(queries, 100, currentParams);
+			SearchHitsBatch batchResults = run(queries, NUM_TRAINING_RESULTS, currentParams);
 			
 			double metricVal = evaluator.evaluate(batchResults);
 			if (metricVal > maxMetric) {
@@ -70,55 +68,42 @@ public class EntityRunner implements QueryRunner {
 		}
 		return bestParams;
 	}
-
-	@Override
-	public SearchHitsBatch run(GQueries queries, int numResults, Map<String, Double> params) {
-		SearchHitsBatch batchResults = new SearchHitsBatch();
-		Iterator<GQuery> queryIt = queries.iterator();
-		while (queryIt.hasNext()) {
-			GQuery query = queryIt.next();
-			SearchHits processedHits = getProcessedQueryResults(query, numResults, params);			
-			batchResults.setSearchHits(query, processedHits);
-		}
-		return batchResults;
-	}
 	
-	private SearchHits getProcessedQueryResults(GQuery query, int numResults, Map<String, Double> params) {
-		double[] paramVals = {params.get(DOCUMENT_WEIGHT), params.get(EXPANSION_WEIGHT), numResults};
+	@Override
+	public SearchHits runQuery(QueryParameters queryParams) {
+		GQuery query = queryParams.getQuery();
+		int numResults = queryParams.getNumResults();
+		Map<String, Double> params = queryParams.getParams();
 
-		if (!processedQueries.resultsExist(query, paramVals)) {
-			query.applyStopper(stopper);
+		query.applyStopper(stopper);
+		
+		SearchHits initialHits = getInitialHits(query);
+		SearchHits processedHits = new SearchHits();
+
+		int i = 0;
+		Iterator<SearchHit> hitIt = initialHits.iterator();
+		while (hitIt.hasNext() && i < numResults) {
+			SearchHit doc = hitIt.next();
+			i++;
 			
-			SearchHits initialHits = getInitialHits(query);
-			SearchHits processedHits = new SearchHits();
+			SearchHit newDoc = new SearchHit();
+			newDoc.setDocno(doc.getDocno());
+			newDoc.setQueryName(query.getTitle());
 
-			int i = 0;
-			Iterator<SearchHit> hitIt = initialHits.iterator();
-			while (hitIt.hasNext() && i < numResults) {
-				SearchHit doc = hitIt.next();
-				i++;
-				
-				SearchHit newDoc = new SearchHit();
-				newDoc.setDocno(doc.getDocno());
-				newDoc.setQueryName(query.getTitle());
-
-				Map<DocScorer, Double> scorerWeights = new HashMap<DocScorer, Double>();
-				scorerWeights.put(docScorer, params.get(DOCUMENT_WEIGHT));
-				scorerWeights.put(expansionDocScorer, params.get(EXPANSION_WEIGHT));
-				
-				DocScorer interpolatedScorer = new InterpolatedDocScorer(scorerWeights);
-				
-				QueryScorer queryScorer = new QueryLikelihoodQueryScorer(interpolatedScorer);
-				
-				newDoc.setScore(queryScorer.scoreQuery(query, doc));
-				processedHits.add(newDoc);
-			}
+			Map<DocScorer, Double> scorerWeights = new HashMap<DocScorer, Double>();
+			scorerWeights.put(docScorer, params.get(DOCUMENT_WEIGHT));
+			scorerWeights.put(expansionDocScorer, params.get(EXPANSION_WEIGHT));
 			
-			processedHits.rank();
-			processedQueries.addResults(processedHits, query, paramVals);
+			DocScorer interpolatedScorer = new InterpolatedDocScorer(scorerWeights);
+			
+			QueryScorer queryScorer = new QueryLikelihoodQueryScorer(interpolatedScorer);
+			
+			newDoc.setScore(queryScorer.scoreQuery(query, doc));
+			processedHits.add(newDoc);
 		}
 		
-		return processedQueries.getResults(query, paramVals);
+		processedHits.rank();
+		return processedHits;
 	}
 	
 	private SearchHits getInitialHits(GQuery query) {
