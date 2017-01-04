@@ -3,20 +3,18 @@ package edu.gslis.entities.docscoring.expansion;
 import java.io.File;
 import java.util.Iterator;
 
-import edu.gslis.queries.GQuery;
 import edu.gslis.scoring.expansion.RM1Builder;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.readers.RelevanceModelReader;
+import edu.gslis.utils.retrieval.QueryResults;
 
 public class FileLookupRM1Builder implements RM1Builder {
 	
 	private String basePath;
-	private GQuery query;
 	private int fbTerms = 20;
 	
-	public FileLookupRM1Builder(GQuery query, String basePath) {
-		setQuery(query);
+	public FileLookupRM1Builder(String basePath) {
 		setBasePath(basePath);
 	}
 
