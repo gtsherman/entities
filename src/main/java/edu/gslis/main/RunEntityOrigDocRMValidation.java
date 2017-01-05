@@ -21,7 +21,9 @@ import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.related_docs.DocumentClusterReader;
 import edu.gslis.related_docs.RelatedDocs;
+import edu.gslis.scoring.CachedDocScorer;
 import edu.gslis.scoring.DirichletDocScorer;
+import edu.gslis.scoring.DocScorer;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
@@ -62,8 +64,8 @@ public class RunEntityOrigDocRMValidation {
 
 		long seed = Long.parseLong(args[1]);
 		
-		DirichletDocScorer docScorer = new DirichletDocScorer(cs);
-		ExpansionDocsDocScorer expansionScorer = new ExpansionDocsDocScorer(wikiIndex, expansionClusters);
+		DocScorer docScorer = new CachedDocScorer(new DirichletDocScorer(cs));
+		DocScorer expansionScorer = new ExpansionDocsDocScorer(wikiIndex, expansionClusters);
 
 		EntityOrigDocRMRunner runner = new EntityOrigDocRMRunner(initialHitsBatch, stopper, rmDir, docScorer, expansionScorer);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
