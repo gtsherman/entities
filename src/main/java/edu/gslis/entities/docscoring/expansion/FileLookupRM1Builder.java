@@ -6,7 +6,9 @@ import java.util.Iterator;
 import edu.gslis.scoring.expansion.RM1Builder;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
-import edu.gslis.utils.readers.RelevanceModelReader;
+import edu.gslis.utils.data.interpreters.RelevanceModelDataInterpreter;
+import edu.gslis.utils.data.sources.DataSource;
+import edu.gslis.utils.data.sources.FileDataSource;
 import edu.gslis.utils.retrieval.QueryResults;
 
 public class FileLookupRM1Builder implements RM1Builder {
@@ -31,9 +33,9 @@ public class FileLookupRM1Builder implements RM1Builder {
 	}
 	
 	public FeatureVector buildRelevanceModel(QueryResults queryResults, Stopper stopper) {
-		RelevanceModelReader rmReader = new RelevanceModelReader(new File(basePath +
-				File.separator + queryResults.getQuery().getTitle()));
-		FeatureVector rmVec = rmReader.getFeatureVector();
+		DataSource data = new FileDataSource(new File(basePath + File.separator + queryResults.getQuery().getTitle()));
+		RelevanceModelDataInterpreter rmReader = new RelevanceModelDataInterpreter();
+		FeatureVector rmVec = rmReader.build(data);
 		if (stopper != null) {
 			Iterator<String> termit = rmVec.iterator();
 			while (termit.hasNext()) {

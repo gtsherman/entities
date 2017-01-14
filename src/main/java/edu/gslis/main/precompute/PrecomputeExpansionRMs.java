@@ -1,6 +1,5 @@
 package edu.gslis.main.precompute;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -20,7 +19,9 @@ import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.readers.SearchResultsReader;
+import edu.gslis.utils.data.factory.DataSourceFactory;
+import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
+import edu.gslis.utils.data.sources.DataSource;
 import edu.gslis.utils.retrieval.QueryResults;
 
 public class PrecomputeExpansionRMs {
@@ -49,7 +50,10 @@ public class PrecomputeExpansionRMs {
 			numEntities = Integer.parseInt(config.get("num-entities"));
 		}
 		
-		SearchHitsBatch initialHitsBatch = (new SearchResultsReader(new File(config.get("initial-hits")), index)).getBatchResults();
+		DataSource data = DataSourceFactory.getDataSource(config.get("intial-hits"),
+				config.get("database"), SearchResultsDataInterpreter.DATA_NAME);
+		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
+		SearchHitsBatch initialHitsBatch = dataInterpreter.build(data);
 		
 		Set<SearchHit> all = new HashSet<SearchHit>();
 		Iterator<SearchHits> hitsIt = initialHitsBatch.searchHitIterator();

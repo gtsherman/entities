@@ -15,7 +15,8 @@ import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
-import edu.gslis.related_docs.DocumentClusterReader;
+import edu.gslis.related_docs.DocumentClusterDataInterpreter;
+import edu.gslis.related_docs.DocumentClusterDataSource;
 import edu.gslis.related_docs.RelatedDocs;
 import edu.gslis.scoring.DirichletDocScorer;
 import edu.gslis.scoring.DocScorer;
@@ -48,7 +49,8 @@ public class RunEntityBackedRetrieval {
 		queries.read(config.get("queries"));
 		
 		int limit = Integer.parseInt(args[1]);
-		RelatedDocs clusters = (new DocumentClusterReader(new File(config.get("document-entities-file")), limit)).getClusters();
+		RelatedDocs clusters = (new DocumentClusterDataInterpreter()).build(
+				new DocumentClusterDataSource(new File(config.get("document-entities-file")), limit));
 		
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));

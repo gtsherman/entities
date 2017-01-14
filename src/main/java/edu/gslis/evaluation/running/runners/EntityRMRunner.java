@@ -3,7 +3,6 @@ package edu.gslis.evaluation.running.runners;
 import java.util.HashMap;
 import java.util.Map;
 
-import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.entities.docscoring.expansion.ExpansionRM3Builder;
 import edu.gslis.entities.docscoring.expansion.SingleExpansionRM1Builder;
 import edu.gslis.evaluation.evaluators.Evaluator;
@@ -12,7 +11,9 @@ import edu.gslis.evaluation.running.runners.support.QueryParameters;
 import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
-import edu.gslis.scoring.DirichletDocScorer;
+import edu.gslis.related_docs.RelatedDocs;
+import edu.gslis.scoring.DocScorer;
+import edu.gslis.scoring.queryscoring.QueryScorer;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
@@ -23,16 +24,25 @@ public class EntityRMRunner extends QueryRunner {
 	private IndexWrapper targetIndex;
 	private SearchHitsBatch initialResultsBatch;
 	private Stopper stopper;
-	private DirichletDocScorer docScorer;
-	private ExpansionDocsDocScorer expansionScorer;
+	private DocScorer docScorer;
+	private QueryScorer docScorerQueryProb;
+	private DocScorer expansionScorer;
+	private QueryScorer expansionScorerQueryProb;
+	private RelatedDocs clusters;
+	private IndexWrapper expansionIndex;
 		
 	public EntityRMRunner(IndexWrapper targetIndex, SearchHitsBatch initialResultsBatch, Stopper stopper,
-			DirichletDocScorer docScorer, ExpansionDocsDocScorer expansionScorer) {
+			DocScorer docScorer, QueryScorer docScorerQueryProb, DocScorer expansionScorer, QueryScorer expansionScorerQueryProb,
+			RelatedDocs clusters, IndexWrapper expansionIndex) {
 		this.targetIndex = targetIndex;
 		this.initialResultsBatch = initialResultsBatch;
 		this.stopper = stopper;
 		this.docScorer = docScorer;
+		this.docScorerQueryProb = docScorerQueryProb;
 		this.expansionScorer = expansionScorer;
+		this.expansionScorerQueryProb = expansionScorerQueryProb;
+		this.clusters = clusters;
+		this.expansionIndex = expansionIndex;
 	}
 
 	@Override
@@ -92,7 +102,11 @@ public class EntityRMRunner extends QueryRunner {
 
 		SearchHits initialHits = getInitialHits(query);
 		
-		SingleExpansionRM1Builder rm1 = new SingleExpansionRM1Builder(query, initialHits, docScorer, expansionScorer, fbDocs, fbTerms);
+		SingleExpansionRM1Builder rm1 = new SingleExpansionRM1Builder(query,
+				initialHits, docScorer, docScorerQueryProb,
+				expansionScorer, expansionScorerQueryProb,
+				clusters, expansionIndex,
+				fbDocs, fbTerms);
 		ExpansionRM3Builder rm3 = new ExpansionRM3Builder(query, rm1);
 		FeatureVector rm3Vector = rm3.buildRelevanceModel(stopper, params);
 		

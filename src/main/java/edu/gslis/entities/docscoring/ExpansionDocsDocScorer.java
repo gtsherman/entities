@@ -20,6 +20,7 @@ public class ExpansionDocsDocScorer implements DocScorer {
 	
 	public static final double DEFAULT_MU = 2500;
 	
+	private double mu;
 	private IndexWrapper expansionIndex;
 	private RelatedDocs clusters;
 	
@@ -32,11 +33,16 @@ public class ExpansionDocsDocScorer implements DocScorer {
 	public ExpansionDocsDocScorer(double mu, IndexWrapper expansionIndex, RelatedDocs clusters) {
 		this.expansionIndex = expansionIndex;
 		this.clusters = clusters;
+		this.mu = mu;
 		
 		IndexBackedCollectionStats colStats = new IndexBackedCollectionStats();
 		colStats.setStatSource(expansionIndex);
 
 		dirichletScorer = new CachedDocScorer(new DirichletDocScorer(mu, colStats));
+	}
+	
+	public double getMu() {
+		return mu;
 	}
 	
 	public IndexWrapper getExpansionIndex() {

@@ -3,15 +3,15 @@ package edu.gslis.entities.docscoring.expansion;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
-import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
+import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.queries.GQuery;
-import edu.gslis.scoring.DirichletDocScorer;
+import edu.gslis.related_docs.RelatedDocs;
 import edu.gslis.scoring.DocScorer;
 import edu.gslis.scoring.InterpolatedDocScorer;
 import edu.gslis.scoring.expansion.RelevanceModelScorer;
-import edu.gslis.scoring.queryscoring.QueryLikelihoodQueryScorer;
 import edu.gslis.scoring.queryscoring.QueryScorer;
 import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
@@ -29,32 +29,49 @@ public class MultiExpansionRM1Builder implements ExpansionRM1Builder {
 	
 	private GQuery query;
 	private SearchHits initialHits;
-	private DirichletDocScorer docScorer;
-	private ExpansionDocsDocScorer selfExpansionScorer;
-	private ExpansionDocsDocScorer wikiExpansionScorer;
-	private DirichletDocScorer docScorerZeroMu;
-	private ExpansionDocsDocScorer selfExpansionScorerZeroMu;
-	private ExpansionDocsDocScorer wikiExpansionScorerZeroMu;
+	private DocScorer docScorer;
+	private DocScorer selfExpansionScorer;
+	private DocScorer wikiExpansionScorer;
+	private QueryScorer docScorerQuery;
+	private QueryScorer selfExpansionScorerQuery;
+	private QueryScorer wikiExpansionScorerQuery;
+	private RelatedDocs selfClusters;
+	private RelatedDocs wikiClusters;
+	private IndexWrapper selfIndex;
+	private IndexWrapper wikiIndex;
 	
 	public MultiExpansionRM1Builder(GQuery query, SearchHits initialHits, 
-			DirichletDocScorer docScorer, ExpansionDocsDocScorer selfExpansionScorer,
-			ExpansionDocsDocScorer wikiExpansionScorer, int feedbackDocs, int feedbackTerms) {
+			DocScorer docScorer, DocScorer selfExpansionScorer,
+			DocScorer wikiExpansionScorer, QueryScorer docScorerQuery,
+			QueryScorer selfExpansionScorerQuery, QueryScorer wikiExpansionScorerQuery,
+			RelatedDocs selfClusters, RelatedDocs wikiClusters,
+			IndexWrapper selfIndex, IndexWrapper wikiIndex,
+			int feedbackDocs, int feedbackTerms) {
 		this.docScorer = docScorer;
 		this.selfExpansionScorer = selfExpansionScorer;
 		this.wikiExpansionScorer = wikiExpansionScorer;
-		this.docScorerZeroMu = new DirichletDocScorer(0, docScorer.getCollectionStats());
-		this.selfExpansionScorerZeroMu = new ExpansionDocsDocScorer(0, selfExpansionScorer.getExpansionIndex(), selfExpansionScorer.getClusters());
-		this.wikiExpansionScorerZeroMu = new ExpansionDocsDocScorer(0, wikiExpansionScorer.getExpansionIndex(), wikiExpansionScorer.getClusters());
+		this.docScorerQuery = docScorerQuery;
+		this.selfExpansionScorerQuery = selfExpansionScorerQuery;
+		this.wikiExpansionScorerQuery = wikiExpansionScorerQuery;
+		this.selfClusters = selfClusters;
+		this.wikiClusters = wikiClusters;
+		this.selfIndex = selfIndex;
+		this.wikiIndex = wikiIndex;
 		setFeedbackDocs(feedbackDocs);
 		setFeedbackTerms(feedbackTerms);
 		setQuery(query, initialHits);
 	}
 	
 	public MultiExpansionRM1Builder(GQuery query, SearchHits initialHits,
-			DirichletDocScorer docScorer, ExpansionDocsDocScorer selfExpansionScorer,
-			ExpansionDocsDocScorer wikiExpansionScorer) {
+			DocScorer docScorer, DocScorer selfExpansionScorer,
+			DocScorer wikiExpansionScorer, QueryScorer docScorerQuery,
+			QueryScorer selfExpansionScorerQuery, QueryScorer wikiExpansionScorerQuery,
+			RelatedDocs selfClusters, RelatedDocs wikiClusters,
+			IndexWrapper selfIndex, IndexWrapper wikiIndex) {
 		this(query, initialHits, docScorer, selfExpansionScorer,
-				wikiExpansionScorer, DEFAULT_FEEDBACK_DOCS, DEFAULT_FEEDBACK_TERMS);
+				wikiExpansionScorer, docScorerQuery, selfExpansionScorerQuery,
+				wikiExpansionScorerQuery, selfClusters, wikiClusters,
+				selfIndex, wikiIndex, DEFAULT_FEEDBACK_DOCS, DEFAULT_FEEDBACK_TERMS);
 	}
 	
 	public void setFeedbackDocs(int feedbackDocs) {
@@ -83,67 +100,83 @@ public class MultiExpansionRM1Builder implements ExpansionRM1Builder {
 			SearchHit hit = hitIt.next();
 			i++;
 			
-			// Combine into an interpolated scorer
+			// Get P(Q|D)
+			double docQueryScore = Math.exp(docScorerQuery.scoreQuery(query, hit));
+			
+			// Set up orig doc RM scorer
+			DocScorer docRMScorer = new RelevanceModelScorer(docScorer, docQueryScore);
+			
+			// Get P(Q|E_D) (expansion documents query likelihood) for self
+			double expDocQueryScoreSelf = Math.exp(selfExpansionScorerQuery.scoreQuery(query, hit));
+			
+			// Set up exp doc RM scorer for self
+			DocScorer expDocRMScorerSelf = new RelevanceModelScorer(selfExpansionScorer, expDocQueryScoreSelf);
+
+			// Get P(Q|E_D) (expansion documents query likelihood) for wiki
+			double expDocQueryScoreWiki = Math.exp(wikiExpansionScorerQuery.scoreQuery(query, hit));
+			
+			// Set up exp doc RM scorer for wiki
+			DocScorer expDocRMScorerWiki = new RelevanceModelScorer(wikiExpansionScorer, expDocQueryScoreWiki);
+
+			// Combine RM scorers
 			Map<DocScorer, Double> docScorers = new HashMap<DocScorer, Double>();
-			docScorers.put(docScorer, params.get(DoubleEntityRunner.DOCUMENT_WEIGHT));
-			docScorers.put(selfExpansionScorer, params.get(DoubleEntityRunner.SELF_WEIGHT));
-			docScorers.put(wikiExpansionScorer, params.get(DoubleEntityRunner.WIKI_WEIGHT));
-			DocScorer interpolatedScorer = new InterpolatedDocScorer(docScorers);
+			docScorers.put(docRMScorer, params.get(DoubleEntityRunner.DOCUMENT_WEIGHT));
+			docScorers.put(expDocRMScorerSelf, params.get(DoubleEntityRunner.SELF_WEIGHT));
+			docScorers.put(expDocRMScorerWiki, params.get(DoubleEntityRunner.WIKI_WEIGHT));
+			DocScorer rmScorer = new InterpolatedDocScorer(docScorers);
 			
-			// Score the query
-			QueryScorer queryScorer = new QueryLikelihoodQueryScorer(interpolatedScorer);
-			double queryScore = Math.exp(queryScorer.scoreQuery(query, hit));
+			Set<String> terms = collectTerms(hit, stopper, 200);
 			
-			// Combine into an interpolated scorer
-			docScorers = new HashMap<DocScorer, Double>();
-			docScorers.put(docScorerZeroMu, params.get(DoubleEntityRunner.DOCUMENT_WEIGHT));
-			docScorers.put(selfExpansionScorerZeroMu, params.get(DoubleEntityRunner.SELF_WEIGHT));
-			docScorers.put(wikiExpansionScorerZeroMu, params.get(DoubleEntityRunner.WIKI_WEIGHT));
-			interpolatedScorer = new InterpolatedDocScorer(docScorers);	
-			
-			DocScorer rmScorer = new RelevanceModelScorer(interpolatedScorer, queryScore);
-				
-			FeatureVector terms = new FeatureVector(stopper);
-			for (String term : hit.getFeatureVector().getFeatures()) {
-				if (stopper != null && stopper.isStopWord(term)) {
-					continue;
-				}
-				terms.addTerm(term, hit.getFeatureVector().getFeatureWeight(term));
-			}
-			if (wikiExpansionScorer.getClusters().getDocsRelatedTo(hit) != null) {
-				for (String docno : wikiExpansionScorer.getClusters().getDocsRelatedTo(hit).keySet()) {
-					SearchHit expansionHit = new IndexBackedSearchHit(wikiExpansionScorer.getExpansionIndex());
-					expansionHit.setDocno(docno);
-					for (String term : expansionHit.getFeatureVector().getFeatures()) {
-						if (stopper != null && stopper.isStopWord(term)) {
-							continue;
-						}
-						terms.addTerm(term, expansionHit.getFeatureVector().getFeatureWeight(term));
-					}
-				}
-			}
-			if (selfExpansionScorer.getClusters().getDocsRelatedTo(hit) != null) {
-				for (String docno : selfExpansionScorer.getClusters().getDocsRelatedTo(hit).keySet()) {
-					SearchHit expansionHit = new IndexBackedSearchHit(selfExpansionScorer.getExpansionIndex());
-					expansionHit.setDocno(docno);
-					for (String term : expansionHit.getFeatureVector().getFeatures()) {
-						if (stopper != null && stopper.isStopWord(term)) {
-							continue;
-						}
-						terms.addTerm(term, expansionHit.getFeatureVector().getFeatureWeight(term));
-					}
-				}
-			}
-			
-			Iterator<String> termit = terms.iterator();
-			while (termit.hasNext()) {
-				String term = termit.next();
+			for (String term : terms) {
 				termScores.addTerm(term, rmScorer.scoreTerm(term, hit));
 			}
 		}
 
 		termScores.clip(feedbackTerms);
 		return termScores;
+	}
+	
+	private Set<String> collectTerms(SearchHit hit, Stopper stopper, int limit) {
+		FeatureVector terms = new FeatureVector(stopper);
+
+		for (String term : hit.getFeatureVector().getFeatures()) {
+			if (stopper != null && stopper.isStopWord(term)) {
+				continue;
+			}
+			terms.addTerm(term, hit.getFeatureVector().getFeatureWeight(term));
+		}
+
+		if (wikiClusters.getDocsRelatedTo(hit) != null) {
+			for (String docno : wikiClusters.getDocsRelatedTo(hit).keySet()) {
+				SearchHit expansionHit = new IndexBackedSearchHit(wikiIndex);
+				expansionHit.setDocno(docno);
+				for (String term : expansionHit.getFeatureVector().getFeatures()) {
+					if (stopper != null && stopper.isStopWord(term)) {
+						continue;
+					}
+					terms.addTerm(term, expansionHit.getFeatureVector().getFeatureWeight(term));
+				}
+			}
+		}
+
+		if (selfClusters.getDocsRelatedTo(hit) != null) {
+			for (String docno : selfClusters.getDocsRelatedTo(hit).keySet()) {
+				SearchHit expansionHit = new IndexBackedSearchHit(selfIndex);
+				expansionHit.setDocno(docno);
+				for (String term : expansionHit.getFeatureVector().getFeatures()) {
+					if (stopper != null && stopper.isStopWord(term)) {
+						continue;
+					}
+					terms.addTerm(term, expansionHit.getFeatureVector().getFeatureWeight(term));
+				}
+			}
+		}
+		
+		if (limit > 0) {
+			terms.clip(limit);
+		}
+
+		return terms.getFeatures();
 	}
 
 }

@@ -5,7 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import edu.gslis.textrepresentation.FeatureVector;
-import edu.gslis.utils.readers.RelevanceModelReader;
+import edu.gslis.utils.data.interpreters.RelevanceModelDataInterpreter;
+import edu.gslis.utils.data.sources.FileDataSource;
 
 public class RMPrereader {
 	
@@ -21,11 +22,12 @@ public class RMPrereader {
 			System.err.println(doc.getName());
 			rms.put(doc.getName(), new HashMap<String, FeatureVector>());
 			for (File rm : doc.listFiles()) {
-				RelevanceModelReader rmReader = new RelevanceModelReader(rm);
+				FileDataSource ds = new FileDataSource(rm);
+				RelevanceModelDataInterpreter rmReader = new RelevanceModelDataInterpreter();
 				if (rm.getName().equalsIgnoreCase(WIKI)) {
-					rms.get(doc.getName()).put(WIKI, rmReader.getFeatureVector());
+					rms.get(doc.getName()).put(WIKI, rmReader.build(ds));
 				} else if (rm.getName().equalsIgnoreCase(SELF)) {
-					rms.get(doc.getName()).put(SELF, rmReader.getFeatureVector());
+					rms.get(doc.getName()).put(SELF, rmReader.build(ds));
 				}
 			}
 		}

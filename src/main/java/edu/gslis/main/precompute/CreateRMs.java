@@ -17,7 +17,9 @@ import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.readers.SearchResultsReader;
+import edu.gslis.utils.data.factory.DataSourceFactory;
+import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
+import edu.gslis.utils.data.sources.DataSource;
 import edu.gslis.utils.retrieval.QueryResults;
 
 public class CreateRMs {
@@ -48,8 +50,10 @@ public class CreateRMs {
 			fbTerms = Integer.parseInt(config.get("fb-terms"));
 		}
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")), index);
-		SearchHitsBatch batchResults = resultsReader.getBatchResults();
+		DataSource data = DataSourceFactory.getDataSource(config.get("intial-hits"),
+				config.get("database"), SearchResultsDataInterpreter.DATA_NAME);
+		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
+		SearchHitsBatch batchResults = dataInterpreter.build(data);
 		
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {

@@ -1,7 +1,6 @@
 package edu.gslis.main;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.Iterator;
@@ -21,7 +20,8 @@ import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.readers.SearchResultsReader;
+import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
+import edu.gslis.utils.data.sources.DatabaseDataSource;
 import edu.gslis.utils.retrieval.QueryResults;
 
 public class RunBaselineRelevanceModel {
@@ -47,7 +47,11 @@ public class RunBaselineRelevanceModel {
 			numDocs = Integer.parseInt(config.get("num-docs"));
 		}
 		
-		SearchHitsBatch batchResults = (new SearchResultsReader(new File(config.get("initial-hits")), index)).getBatchResults();;
+		DatabaseDataSource data = new DatabaseDataSource(DatabaseDataSource.getConnection(config.get("database")),
+				SearchResultsDataInterpreter.DATA_NAME);
+		data.read();
+		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
+		SearchHitsBatch batchResults = dataInterpreter.build(data);
 		
 		int fbDocs = 20;
 		if (config.get("fb-docs") != null) {

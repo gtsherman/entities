@@ -19,7 +19,9 @@ import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.readers.SearchResultsReader;
+import edu.gslis.utils.data.factory.DataSourceFactory;
+import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
+import edu.gslis.utils.data.sources.DataSource;
 
 public class PrecomputeDocumentProbabilities {
 	
@@ -39,8 +41,10 @@ public class PrecomputeDocumentProbabilities {
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 		
-		SearchResultsReader resultsReader = new SearchResultsReader(new File(config.get("initial-hits")));
-		SearchHitsBatch initialHitsBatch = resultsReader.getBatchResults();
+		DataSource data = DataSourceFactory.getDataSource(config.get("intial-hits"),
+				config.get("database"), SearchResultsDataInterpreter.DATA_NAME);
+		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
+		SearchHitsBatch initialHitsBatch = dataInterpreter.build(data);
 		
 		String outDir = config.get("document-probability-data-dir");
 		

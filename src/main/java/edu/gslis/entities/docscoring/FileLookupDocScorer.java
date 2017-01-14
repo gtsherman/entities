@@ -1,31 +1,44 @@
 package edu.gslis.entities.docscoring;
 
 import java.io.File;
-import java.util.Map;
 
-import edu.gslis.readers.QueryProbabilityReader;
+import edu.gslis.readers.QueryProbabilityDataInterpreter;
 import edu.gslis.scoring.DocScorer;
 import edu.gslis.searchhits.SearchHit;
+import edu.gslis.textrepresentation.FeatureVector;
+import edu.gslis.utils.data.sources.DataSource;
+import edu.gslis.utils.data.sources.FileDataSource;
 
 public class FileLookupDocScorer implements DocScorer {
 	
-	private Map<String, Double> termProbs;
+	private String basePath;
+	private FeatureVector termProbs;
+	private String currentDoc = "";
 	
-	public FileLookupDocScorer(String filePath) {
-		this(new File(filePath));
+	public FileLookupDocScorer(String basePath) {
+		this.basePath = basePath;
 	}
 	
-	public FileLookupDocScorer(File file) {
-		QueryProbabilityReader qpreader = new QueryProbabilityReader(file);
-		termProbs = qpreader.getTermProbs();
+	public void build(String fileName) {
+		build(new FileDataSource(new File(basePath + File.separator + fileName)));
+	}
+
+	public void build(DataSource ds) {
+		QueryProbabilityDataInterpreter qpreader = new QueryProbabilityDataInterpreter();
+		termProbs = qpreader.build(ds);
 	}
 
 	@Override
 	public double scoreTerm(String term, SearchHit doc) {
-		if (!termProbs.containsKey(term)) {
-			termProbs.put(term, 0.0);
+		String docno = doc.getDocno();
+		if (!currentDoc.equals(docno)) {
+			build(docno);
+			currentDoc = docno;
 		}
-		return termProbs.get(term);
+		if (!termProbs.contains(term)) {
+			return 0.0;
+		}
+		return termProbs.getFeatureWeight(term);
 	}
 
 }

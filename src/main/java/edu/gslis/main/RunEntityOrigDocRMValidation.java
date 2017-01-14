@@ -19,7 +19,8 @@ import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
-import edu.gslis.related_docs.DocumentClusterReader;
+import edu.gslis.related_docs.DocumentClusterDataInterpreter;
+import edu.gslis.related_docs.DocumentClusterDataSource;
 import edu.gslis.related_docs.RelatedDocs;
 import edu.gslis.scoring.CachedDocScorer;
 import edu.gslis.scoring.DirichletDocScorer;
@@ -28,7 +29,9 @@ import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.readers.SearchResultsReader;
+import edu.gslis.utils.data.factory.DataSourceFactory;
+import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
+import edu.gslis.utils.data.sources.DataSource;
 
 public class RunEntityOrigDocRMValidation {
 	
@@ -50,7 +53,8 @@ public class RunEntityOrigDocRMValidation {
 		
 		String rmDir = config.get("rms-dir");
 		
-		RelatedDocs expansionClusters = (new DocumentClusterReader(new File(config.get("document-entities-file")))).getClusters();
+		RelatedDocs expansionClusters = (new DocumentClusterDataInterpreter()).build(
+				new DocumentClusterDataSource(new File(config.get("document-entities-file"))));
 
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
@@ -60,7 +64,10 @@ public class RunEntityOrigDocRMValidation {
 			evaluator = new NDCGEvaluator(qrels);
 		}
 		
-		SearchHitsBatch initialHitsBatch = (new SearchResultsReader(new File(config.get("initial-hits")), index)).getBatchResults();
+		DataSource data = DataSourceFactory.getDataSource(config.get("intial-hits"),
+				config.get("database"), SearchResultsDataInterpreter.DATA_NAME);
+		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
+		SearchHitsBatch initialHitsBatch = dataInterpreter.build(data);
 
 		long seed = Long.parseLong(args[1]);
 		

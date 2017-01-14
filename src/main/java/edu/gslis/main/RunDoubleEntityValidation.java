@@ -23,7 +23,9 @@ import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.readers.SearchResultsReader;
+import edu.gslis.utils.data.factory.DataSourceFactory;
+import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
+import edu.gslis.utils.data.sources.DataSource;
 
 public class RunDoubleEntityValidation {
 	
@@ -56,7 +58,10 @@ public class RunDoubleEntityValidation {
 			evaluator = new NDCGEvaluator(qrels);
 		}
 		
-		SearchHitsBatch initialHitsBatch = (new SearchResultsReader(new File(config.get("initial-hits")), index)).getBatchResults();
+		DataSource data = DataSourceFactory.getDataSource(config.get("intial-hits"),
+				config.get("database"), SearchResultsDataInterpreter.DATA_NAME);
+		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
+		SearchHitsBatch initialHitsBatch = dataInterpreter.build(data);
 		
 		long seed = Long.parseLong(args[1]);
 		

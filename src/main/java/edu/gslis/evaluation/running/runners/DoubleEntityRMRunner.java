@@ -3,7 +3,6 @@ package edu.gslis.evaluation.running.runners;
 import java.util.HashMap;
 import java.util.Map;
 
-import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.entities.docscoring.expansion.ExpansionRM3Builder;
 import edu.gslis.entities.docscoring.expansion.MultiExpansionRM1Builder;
 import edu.gslis.evaluation.evaluators.Evaluator;
@@ -12,7 +11,9 @@ import edu.gslis.evaluation.running.runners.support.QueryParameters;
 import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
-import edu.gslis.scoring.DirichletDocScorer;
+import edu.gslis.related_docs.RelatedDocs;
+import edu.gslis.scoring.DocScorer;
+import edu.gslis.scoring.queryscoring.QueryScorer;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
@@ -25,19 +26,36 @@ public class DoubleEntityRMRunner extends QueryRunner {
 	private IndexWrapper targetIndex;
 	private SearchHitsBatch initialResultsBatch;
 	private Stopper stopper;
-	private DirichletDocScorer docScorer;
-	private ExpansionDocsDocScorer selfExpansionScorer;
-	private ExpansionDocsDocScorer wikiExpansionScorer;
+	private DocScorer docScorer;
+	private DocScorer selfExpansionScorer;
+	private DocScorer wikiExpansionScorer;
+	private QueryScorer docScorerQuery;
+	private QueryScorer selfExpansionScorerQuery;
+	private QueryScorer wikiExpansionScorerQuery;
+	private RelatedDocs selfClusters;
+	private RelatedDocs wikiClusters;
+	private IndexWrapper selfIndex;
+	private IndexWrapper wikiIndex;
 	
 	public DoubleEntityRMRunner(IndexWrapper targetIndex, SearchHitsBatch initialResultsBatch, Stopper stopper,
-			DirichletDocScorer docScorer, ExpansionDocsDocScorer selfExpansionScorer,
-			ExpansionDocsDocScorer wikiExpansionScorer) {
+			DocScorer docScorer, DocScorer selfExpansionScorer,
+			DocScorer wikiExpansionScorer, QueryScorer docScorerQuery,
+			QueryScorer selfExpansionScorerQuery, QueryScorer wikiExpansionScorerQuery,
+			RelatedDocs selfClusters, RelatedDocs wikiClusters,
+			IndexWrapper selfIndex, IndexWrapper wikiIndex) {
 		this.targetIndex = targetIndex;
 		this.initialResultsBatch = initialResultsBatch;
 		this.stopper = stopper;
 		this.docScorer = docScorer;
 		this.selfExpansionScorer = selfExpansionScorer;
 		this.wikiExpansionScorer = wikiExpansionScorer;
+		this.docScorerQuery = docScorerQuery;
+		this.selfExpansionScorerQuery = selfExpansionScorerQuery;
+		this.wikiExpansionScorerQuery = wikiExpansionScorerQuery;
+		this.selfClusters = selfClusters;
+		this.wikiClusters = wikiClusters;
+		this.selfIndex = selfIndex;
+		this.wikiIndex = wikiIndex;
 	}
 
 	@Override
@@ -103,7 +121,9 @@ public class DoubleEntityRMRunner extends QueryRunner {
 		
 		// Setup RM1 and RM3 builders
 		MultiExpansionRM1Builder rm1Builder = new MultiExpansionRM1Builder(query, initialHits,
-				docScorer, selfExpansionScorer, wikiExpansionScorer,
+				docScorer, selfExpansionScorer, wikiExpansionScorer, docScorerQuery,
+				selfExpansionScorerQuery, wikiExpansionScorerQuery,
+				selfClusters, wikiClusters, selfIndex, wikiIndex,
 				fbDocs, fbTerms);
 		ExpansionRM3Builder rm3Builder = new ExpansionRM3Builder(query, rm1Builder);
 		

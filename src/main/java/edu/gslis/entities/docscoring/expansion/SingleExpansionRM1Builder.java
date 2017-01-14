@@ -1,19 +1,17 @@
 package edu.gslis.entities.docscoring.expansion;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.evaluation.running.runners.EntityRunner;
+import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.queries.GQuery;
-import edu.gslis.scoring.DirichletDocScorer;
+import edu.gslis.related_docs.RelatedDocs;
 import edu.gslis.scoring.DocScorer;
 import edu.gslis.scoring.InterpolatedDocScorer;
 import edu.gslis.scoring.expansion.RelevanceModelScorer;
-import edu.gslis.scoring.queryscoring.QueryLikelihoodQueryScorer;
 import edu.gslis.scoring.queryscoring.QueryScorer;
 import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
@@ -31,21 +29,32 @@ public class SingleExpansionRM1Builder implements ExpansionRM1Builder {
 	
 	private GQuery query;
 	private SearchHits initialHits;
-	private DirichletDocScorer docScorer;
-	private ExpansionDocsDocScorer expansionScorer;
-	private DirichletDocScorer docScorerZeroMu;
-	private ExpansionDocsDocScorer expansionScorerZeroMu;
+	private RelatedDocs clusters;
+	private IndexWrapper expansionIndex;
+	private DocScorer docScorer;
+	private QueryScorer docScorerQueryProb;
+	private DocScorer expansionScorer;
+	private QueryScorer expansionScorerQueryProb;
 	
 	public SingleExpansionRM1Builder(GQuery query,
 			SearchHits initialHits, 
-			DirichletDocScorer docScorer, 
-			ExpansionDocsDocScorer expansionScorer,
+			DocScorer docScorer, 
+			QueryScorer docScorerQueryProb,
+			DocScorer expansionScorer,
+			QueryScorer expansionScorerQueryProb,
+			RelatedDocs clusters,
+			IndexWrapper expansionIndex,
 			int feedbackDocs,
 			int feedbackTerms) {
+
 		this.docScorer = docScorer;
+		this.docScorerQueryProb = docScorerQueryProb;
 		this.expansionScorer = expansionScorer;
-		this.docScorerZeroMu = new DirichletDocScorer(0, docScorer.getCollectionStats());
-		this.expansionScorerZeroMu = new ExpansionDocsDocScorer(0, expansionScorer.getExpansionIndex(), expansionScorer.getClusters());
+		this.expansionScorerQueryProb = expansionScorerQueryProb;
+
+		this.clusters = clusters;
+		this.expansionIndex = expansionIndex;
+		
 		setFeedbackDocs(feedbackDocs);
 		setFeedbackTerms(feedbackTerms);
 		setQuery(query, initialHits);
@@ -53,10 +62,15 @@ public class SingleExpansionRM1Builder implements ExpansionRM1Builder {
 	
 	public SingleExpansionRM1Builder(GQuery query,
 			SearchHits initialHits,
-			DirichletDocScorer docScorer,
-			ExpansionDocsDocScorer expansionScorer) {
-		this(query, initialHits, docScorer, expansionScorer,
-				DEFAULT_FEEDBACK_DOCS, DEFAULT_FEEDBACK_TERMS);
+			DocScorer docScorer,
+			QueryScorer docScorerQueryProb,
+			DocScorer expansionScorer,
+			QueryScorer expansionScorerQueryProb,
+			RelatedDocs clusters,
+			IndexWrapper expansionIndex) {
+		this(query, initialHits, docScorer, docScorerQueryProb,
+				expansionScorer, expansionScorerQueryProb, clusters,
+				expansionIndex, DEFAULT_FEEDBACK_DOCS, DEFAULT_FEEDBACK_TERMS);
 	}
 	
 	public void setFeedbackDocs(int feedbackDocs) {
@@ -82,54 +96,70 @@ public class SingleExpansionRM1Builder implements ExpansionRM1Builder {
 		int i = 0;
 		Iterator<SearchHit> hitIt = initialHits.iterator();
 		while (hitIt.hasNext() && i < feedbackDocs) {
-			SearchHit hit = hitIt.next();
+			SearchHit d = hitIt.next();
 			i++;
 			
-			// Combine into an interpolated scorer
+			// Get P(Q|D)
+			double docQueryScore = Math.exp(docScorerQueryProb.scoreQuery(query, d));
+			
+			// Set up orig doc RM scorer
+			DocScorer docRMScorer = new RelevanceModelScorer(docScorer, docQueryScore);
+			
+			// Get P(Q|E_D) (expansion documents query likelihood)
+			double expDocQueryScore = Math.exp(expansionScorerQueryProb.scoreQuery(query, d));
+			
+			// Set up exp doc RM scorer
+			DocScorer expDocRMScorer = new RelevanceModelScorer(expansionScorer, expDocQueryScore);
+			
+			// Combine RM scorers
 			Map<DocScorer, Double> docScorers = new HashMap<DocScorer, Double>();
-			docScorers.put(docScorer, params.get(EntityRunner.DOCUMENT_WEIGHT)); // P(q|D)
-			docScorers.put(expansionScorer, params.get(EntityRunner.EXPANSION_WEIGHT)); // P(q|E)
-			DocScorer interpolatedScorer = new InterpolatedDocScorer(docScorers); // lambda
-			
-			// Score the query
-			QueryScorer queryScorer = new QueryLikelihoodQueryScorer(interpolatedScorer);
-			double queryScore = Math.exp(queryScorer.scoreQuery(query, hit)); // P(Q|D)
-			
-			// Combine into an interpolated scorer
-			docScorers = new HashMap<DocScorer, Double>();
-			docScorers.put(docScorerZeroMu, params.get(EntityRunner.DOCUMENT_WEIGHT)); // P(w|D)
-			docScorers.put(expansionScorerZeroMu, params.get(EntityRunner.EXPANSION_WEIGHT)); // P(w|E)
-			interpolatedScorer = new InterpolatedDocScorer(docScorers);	// lambda
-			
-			DocScorer rmScorer = new RelevanceModelScorer(interpolatedScorer, queryScore);
+			docScorers.put(docRMScorer, params.get(EntityRunner.DOCUMENT_WEIGHT));
+			docScorers.put(expDocRMScorer, params.get(EntityRunner.EXPANSION_WEIGHT));
+			DocScorer rmScorer = new InterpolatedDocScorer(docScorers);
 				
-			Set<String> terms = new HashSet<String>();
-			for (String term : hit.getFeatureVector().getFeatures()) {
-				if (stopper != null && stopper.isStopWord(term)) {
-					continue;
-				}
-				terms.add(term);
-			}
-			if (expansionScorer.getClusters().getDocsRelatedTo(hit) != null) {
-				for (String docno : expansionScorer.getClusters().getDocsRelatedTo(hit).keySet()) {
-					SearchHit expansionHit = new IndexBackedSearchHit(expansionScorer.getExpansionIndex());
-					expansionHit.setDocno(docno);
-					for (String term : expansionHit.getFeatureVector().getFeatures()) {
-						if (stopper != null && stopper.isStopWord(term)) {
-							continue;
-						}
-						terms.add(term);
-					}
-				}
-			}
+			// Collect terms for this document and its expansion documents
+			Set<String> terms = collectTerms(d, stopper, 200);
 			
+			// Add this document's contribution to the overall RM
 			for (String term : terms) {
-				termScores.addTerm(term, rmScorer.scoreTerm(term, hit));
+				termScores.addTerm(term, rmScorer.scoreTerm(term, d));
 			}
 		}
 
 		termScores.clip(feedbackTerms);
 		return termScores;
+	}
+	
+	private Set<String> collectTerms(SearchHit hit, Stopper stopper, int limit) {
+		FeatureVector terms = new FeatureVector(null);
+		
+		// Collect non-stop words from this document
+		for (String term : hit.getFeatureVector().getFeatures()) {
+			if (stopper != null && stopper.isStopWord(term)) {
+				continue;
+			}
+			terms.addTerm(term, hit.getFeatureVector().getFeatureWeight(term));
+		}
+		
+		// Collect non-stop words from this document's expansion documents
+		if (clusters.getDocsRelatedTo(hit) != null) {
+			for (String docno : clusters.getDocsRelatedTo(hit).keySet()) {
+				SearchHit expansionHit = new IndexBackedSearchHit(expansionIndex);
+				expansionHit.setDocno(docno);
+				for (String term : expansionHit.getFeatureVector().getFeatures()) {
+					if (stopper != null && stopper.isStopWord(term)) {
+						continue;
+					}
+					terms.addTerm(term, hit.getFeatureVector().getFeatureWeight(term));
+				}
+			}
+		}
+		
+		if (limit > 0) {
+			terms.clip(limit);
+		}
+
+		return terms.getFeatures();
 	}
 
 }

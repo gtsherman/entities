@@ -11,16 +11,20 @@ import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
-import edu.gslis.related_docs.DocumentClusterReader;
+import edu.gslis.related_docs.DocumentClusterDataInterpreter;
+import edu.gslis.related_docs.DocumentClusterDataSource;
 import edu.gslis.related_docs.RelatedDocs;
 import edu.gslis.scoring.DocScorer;
 import edu.gslis.searchhits.IndexBackedSearchHit;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
+import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.readers.SearchResultsReader;
+import edu.gslis.utils.data.factory.DataSourceFactory;
+import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
+import edu.gslis.utils.data.sources.DataSource;
 
 public class PrecomputeClusterTermProbabilities {
 	
@@ -33,7 +37,10 @@ public class PrecomputeClusterTermProbabilities {
 		if (config.get("wiki-index") != null)
 			wikiIndex = new IndexWrapperIndriImpl(config.get("wiki-index"));
 		
-		SearchResultsReader results = new SearchResultsReader(new File(config.get("initial-hits")));
+		DataSource data = DataSourceFactory.getDataSource(config.get("intial-hits"),
+				config.get("database"), SearchResultsDataInterpreter.DATA_NAME);
+		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
+		SearchHitsBatch initialHitsBatch = dataInterpreter.build(data);
 		
 		Stopper stopper = null;
 		if (config.get("stoplist") != null)
@@ -43,8 +50,9 @@ public class PrecomputeClusterTermProbabilities {
 		queries.read(config.get("queries"));
 		
 		int numEntities = Integer.parseInt(args[1]);
-		DocumentClusterReader clustersReader = new DocumentClusterReader(new File(config.get("document-entities-file")), numEntities);
-		RelatedDocs clusters = clustersReader.getClusters();
+		DocumentClusterDataInterpreter clustersReader = new DocumentClusterDataInterpreter();
+		RelatedDocs clusters = clustersReader.build(
+				new DocumentClusterDataSource(new File(config.get("document-entities-file")), numEntities));
 		
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
@@ -63,7 +71,7 @@ public class PrecomputeClusterTermProbabilities {
 			if (!queryDir.exists())
 				queryDir.mkdirs();
 			
-			SearchHits initialHits = results.getBatchResults().getSearchHits(query);
+			SearchHits initialHits = initialHitsBatch.getSearchHits(query);
 			if (initialHits == null) {
 				System.err.println("No documents for "+query.getTitle());
 				continue;
