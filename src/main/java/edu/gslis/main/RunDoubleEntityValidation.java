@@ -4,6 +4,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.sql.Connection;
 import java.util.Iterator;
 
 import edu.gslis.entities.docscoring.FileLookupDocScorer;
@@ -23,9 +24,8 @@ import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.data.factory.DataSourceFactory;
 import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
-import edu.gslis.utils.data.sources.DataSource;
+import edu.gslis.utils.data.sources.DatabaseDataSource;
 
 public class RunDoubleEntityValidation {
 	
@@ -58,8 +58,10 @@ public class RunDoubleEntityValidation {
 			evaluator = new NDCGEvaluator(qrels);
 		}
 		
-		DataSource data = DataSourceFactory.getDataSource(config.get("intial-hits"),
-				config.get("database"), SearchResultsDataInterpreter.DATA_NAME);
+		Connection dbCon = DatabaseDataSource.getConnection(config.get("database"));
+		
+		DatabaseDataSource data = new DatabaseDataSource(dbCon, SearchResultsDataInterpreter.DATA_NAME);
+		data.read();
 		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
 		SearchHitsBatch initialHitsBatch = dataInterpreter.build(data);
 		

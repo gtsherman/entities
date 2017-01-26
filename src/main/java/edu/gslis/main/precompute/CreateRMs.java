@@ -3,6 +3,7 @@ package edu.gslis.main.precompute;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.sql.Connection;
 import java.util.Iterator;
 
 import edu.gslis.docscoring.support.CollectionStats;
@@ -17,10 +18,8 @@ import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.data.factory.DataSourceFactory;
 import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
-import edu.gslis.utils.data.sources.DataSource;
-import edu.gslis.utils.retrieval.QueryResults;
+import edu.gslis.utils.data.sources.DatabaseDataSource;
 
 public class CreateRMs {
 
@@ -50,8 +49,10 @@ public class CreateRMs {
 			fbTerms = Integer.parseInt(config.get("fb-terms"));
 		}
 		
-		DataSource data = DataSourceFactory.getDataSource(config.get("intial-hits"),
-				config.get("database"), SearchResultsDataInterpreter.DATA_NAME);
+		Connection dbCon = DatabaseDataSource.getConnection(config.get("database"));
+
+		DatabaseDataSource data = new DatabaseDataSource(dbCon, SearchResultsDataInterpreter.DATA_NAME);
+		data.read();
 		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
 		SearchHitsBatch batchResults = dataInterpreter.build(data);
 		
@@ -66,11 +67,9 @@ public class CreateRMs {
 				continue;
 			}
 			
-			QueryResults queryResults = new QueryResults(query, batchResults.getSearchHits(query));
-			
 			// RM1 built on target index
 			RM1Builder rm1 = new StandardRM1Builder(fbDocs, fbTerms, collectionStats);
-			FeatureVector rmVec = rm1.buildRelevanceModel(queryResults, stopper);
+			FeatureVector rmVec = rm1.buildRelevanceModel(query, batchResults.getSearchHits(query), stopper);
 			rmVec.normalize();
 			
 			FileWriter out = new FileWriter(outDir + File.separator + query.getTitle());

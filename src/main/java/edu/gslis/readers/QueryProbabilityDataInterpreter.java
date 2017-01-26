@@ -6,11 +6,10 @@ import java.util.List;
 
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.data.interpreters.DataInterpreter;
-import edu.gslis.utils.data.interpreters.FeatureVectorBuilder;
 import edu.gslis.utils.data.interpreters.RelevanceModelDataInterpreter;
 import edu.gslis.utils.data.sources.DataSource;
 
-public class QueryProbabilityDataInterpreter extends DataInterpreter implements FeatureVectorBuilder {
+public class QueryProbabilityDataInterpreter extends DataInterpreter {
 	
 	public static final String DATA_NAME = "query_probability";
 	

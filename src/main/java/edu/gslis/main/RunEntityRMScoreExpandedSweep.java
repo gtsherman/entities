@@ -18,7 +18,7 @@ import edu.gslis.entities.docscoring.CachedFileLookupDocScorer;
 import edu.gslis.entities.docscoring.FileLookupDocScorer;
 import edu.gslis.entities.docscoring.QueryProbDatabaseLookupDocScorer;
 import edu.gslis.entities.docscoring.RMDatabaseLookupDocScorer;
-import edu.gslis.evaluation.running.runners.EntityRMRunnerExpansion;
+import edu.gslis.evaluation.running.runners.EntityRMRunnerExpansionScoreExpanded;
 import edu.gslis.evaluation.running.runners.EntityRunner;
 import edu.gslis.evaluation.running.runners.RMRunner;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
@@ -40,7 +40,7 @@ import edu.gslis.utils.data.interpreters.RelevanceModelDataInterpreter;
 import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
 import edu.gslis.utils.data.sources.DatabaseDataSource;
 
-public class RunEntityRMSweep {
+public class RunEntityRMScoreExpandedSweep {
 	
 	public static void main(String[] args) throws InterruptedException, IOException {
 		Configuration config = new SimpleConfiguration();
@@ -102,7 +102,7 @@ public class RunEntityRMSweep {
 						RelevanceModelDataInterpreter.SCORE_FIELD,
 						"QUERY", "DOCUMENT")));
 
-		EntityRMRunnerExpansion runner = new EntityRMRunnerExpansion(index, initialHitsBatch,
+		EntityRMRunnerExpansionScoreExpanded runner = new EntityRMRunnerExpansionScoreExpanded(index, initialHitsBatch,
 				stopper, docScorer, docScorerQueryProb, expansionScorer,
 				expansionScorerQueryProb, termCollector);
 

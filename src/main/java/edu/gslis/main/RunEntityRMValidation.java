@@ -1,7 +1,6 @@
 package edu.gslis.main;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.sql.Connection;
@@ -11,14 +10,14 @@ import java.util.Set;
 
 import edu.gslis.docscoring.support.PrefetchedCollectionStats;
 import edu.gslis.entities.docscoring.CachedFileLookupDocScorer;
-import edu.gslis.entities.docscoring.DatabaseLookupDocScorer;
 import edu.gslis.entities.docscoring.FileLookupDocScorer;
-import edu.gslis.entities.docscoring.FileLookupQueryLikelihoodQueryScorer;
+import edu.gslis.entities.docscoring.QueryProbDatabaseLookupDocScorer;
+import edu.gslis.entities.docscoring.RMDatabaseLookupDocScorer;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
 import edu.gslis.evaluation.evaluators.NDCGEvaluator;
-import edu.gslis.evaluation.running.runners.EntityRMRunner;
+import edu.gslis.evaluation.running.runners.EntityRMRunnerExpansion;
 import edu.gslis.evaluation.validators.KFoldValidator;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
@@ -26,14 +25,11 @@ import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.readers.QueryProbabilityDataInterpreter;
-import edu.gslis.related_docs.DocumentClusterDataInterpreter;
-import edu.gslis.related_docs.DocumentClusterDataSource;
-import edu.gslis.related_docs.RelatedDocs;
+import edu.gslis.related_docs.term_collectors.DatabaseTermCollector;
+import edu.gslis.related_docs.term_collectors.TermCollector;
 import edu.gslis.scoring.CachedDocScorer;
 import edu.gslis.scoring.DirichletDocScorer;
 import edu.gslis.scoring.DocScorer;
-import edu.gslis.scoring.queryscoring.QueryLikelihoodQueryScorer;
-import edu.gslis.scoring.queryscoring.QueryScorer;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
@@ -49,7 +45,6 @@ public class RunEntityRMValidation {
 		config.read(args[0]);
 		
 		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
-		IndexWrapperIndriImpl wikiIndex = new IndexWrapperIndriImpl(config.get("wiki-index"));
 
 		Stopper stopper = new Stopper(config.get("stoplist"));
 
@@ -60,11 +55,6 @@ public class RunEntityRMValidation {
 
 		String targetMetric = config.get("target-metric");
 		
-		DocumentClusterDataInterpreter clusterInterpreter = new DocumentClusterDataInterpreter();
-		RelatedDocs expansionClusters = clusterInterpreter.build(
-				new DocumentClusterDataSource(new File(config.get("document-entities-file"))));
-		System.err.println("Read in " + expansionClusters.getNumClusters() + " clusters");
-
 		Set<String> terms = new HashSet<String>();
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {
@@ -88,7 +78,10 @@ public class RunEntityRMValidation {
 		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
 		SearchHitsBatch initialHitsBatch = dataInterpreter.build(data);
 
-		long seed = Long.parseLong(args[1]);
+		long seed = 1;
+		if (args.length > 1) {
+			seed = Long.parseLong(args[1]);
+		}
 		
 		String expCol = config.get("expansion-collection");
 
@@ -97,29 +90,33 @@ public class RunEntityRMValidation {
 		DatabaseDataSource expansionQueryData = new DatabaseDataSource(
 				dbCon, "expansion_probabilities_" + expCol);
 		
+		// Term collector
+		TermCollector termCollector = new DatabaseTermCollector(expansionData,
+				new RelevanceModelDataInterpreter(RelevanceModelDataInterpreter.SCORE_FIELD,
+						RelevanceModelDataInterpreter.TERM_FIELD,
+						"ORIGINAL_DOCUMENT"));
+				
 		// fbDocs scorer
 		DocScorer docScorer = new CachedDocScorer(new DirichletDocScorer(0, cs));
 		
 		// fbDocs query scorer
 		FileLookupDocScorer docScorerQueryProb = new CachedFileLookupDocScorer(config.get("document-probability-data-dir"));
-		QueryScorer docQueryScorer = new FileLookupQueryLikelihoodQueryScorer(docScorerQueryProb);
 		
 		// expansion docs scorer
-		DocScorer expansionScorer = new CachedDocScorer(new DatabaseLookupDocScorer(expansionData,
+		DocScorer expansionScorer = new CachedDocScorer(new RMDatabaseLookupDocScorer(expansionData,
 				new RelevanceModelDataInterpreter(RelevanceModelDataInterpreter.SCORE_FIELD,
 						RelevanceModelDataInterpreter.TERM_FIELD,
 						"ORIGINAL_DOCUMENT")));
 		
 		// expansion docs query scorer
-		DocScorer expansionScorerQueryProb = new CachedDocScorer(new DatabaseLookupDocScorer(expansionQueryData,
+		DocScorer expansionScorerQueryProb = new CachedDocScorer(new QueryProbDatabaseLookupDocScorer(expansionQueryData,
 				new QueryProbabilityDataInterpreter(RelevanceModelDataInterpreter.TERM_FIELD,
 						RelevanceModelDataInterpreter.SCORE_FIELD,
 						"QUERY", "DOCUMENT")));
-		QueryScorer expansionQueryScorer = new QueryLikelihoodQueryScorer(expansionScorerQueryProb);
 
-		EntityRMRunner runner = new EntityRMRunner(index, initialHitsBatch,
-				stopper, docScorer, docQueryScorer, expansionScorer,
-				expansionQueryScorer, expansionClusters, wikiIndex);
+		EntityRMRunnerExpansion runner = new EntityRMRunnerExpansion(index, initialHitsBatch,
+				stopper, docScorer, docScorerQueryProb, expansionScorer,
+				expansionScorerQueryProb, termCollector);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		
 		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);

@@ -22,7 +22,6 @@ import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
 import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
 import edu.gslis.utils.data.sources.DatabaseDataSource;
-import edu.gslis.utils.retrieval.QueryResults;
 
 public class RunBaselineRelevanceModel {
 	
@@ -81,11 +80,9 @@ public class RunBaselineRelevanceModel {
 
 			SearchHits hits = batchResults.getSearchHits(query);
 			
-			QueryResults queryResults = new QueryResults(query, hits);
-
 			RM1Builder rmBuilder = new StandardRM1Builder(fbDocs, fbTerms, cs);
 			RM3Builder rm3Builder = new RM3Builder();
-			FeatureVector rmVec = rm3Builder.buildRelevanceModel(queryResults,
+			FeatureVector rmVec = rm3Builder.buildRelevanceModel(query, hits,
 					rmBuilder, origQueryWeight, stopper);
 			
 			System.err.println(rmVec.toString(10));

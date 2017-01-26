@@ -1,6 +1,7 @@
 package edu.gslis.main.analysis;
 
 import java.io.File;
+import java.sql.Connection;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -17,9 +18,8 @@ import edu.gslis.similarity.KLScorer;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.data.factory.DataSourceFactory;
 import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
-import edu.gslis.utils.data.sources.DataSource;
+import edu.gslis.utils.data.sources.DatabaseDataSource;
 
 public class ComputeDocumentExpansionKLDivergence {
 	
@@ -34,8 +34,9 @@ public class ComputeDocumentExpansionKLDivergence {
 		IndexWrapper wikiIndex = new IndexWrapperIndriImpl(config.get("wiki-index"));
 		
 		System.err.println("Loading initial results");
-		DataSource data = DataSourceFactory.getDataSource(config.get("intial-hits"),
-				config.get("database"), SearchResultsDataInterpreter.DATA_NAME);
+		Connection dbCon = DatabaseDataSource.getConnection(config.get("database"));
+		DatabaseDataSource data = new DatabaseDataSource(dbCon, SearchResultsDataInterpreter.DATA_NAME);
+		data.read();
 		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
 		SearchHitsBatch initialHitsBatch = dataInterpreter.build(data);
 		

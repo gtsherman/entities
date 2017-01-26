@@ -1,9 +1,15 @@
 package edu.gslis.entities.docscoring.expansion;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
 import edu.gslis.indexes.IndexWrapper;
@@ -39,6 +45,16 @@ public class MultiExpansionRM1Builder implements ExpansionRM1Builder {
 	private RelatedDocs wikiClusters;
 	private IndexWrapper selfIndex;
 	private IndexWrapper wikiIndex;
+	
+	private LoadingCache<ExpansionKey, Set<String>> terms = CacheBuilder.newBuilder()
+			.softValues()
+			.build(
+					new CacheLoader<ExpansionKey, Set<String>>() {
+						public Set<String> load(ExpansionKey key) throws Exception {
+							return collectTerms(key.getDoc(),
+									key.getStopper(), key.getLimit());
+						}
+					});
 	
 	public MultiExpansionRM1Builder(GQuery query, SearchHits initialHits, 
 			DocScorer docScorer, DocScorer selfExpansionScorer,
@@ -98,6 +114,7 @@ public class MultiExpansionRM1Builder implements ExpansionRM1Builder {
 		Iterator<SearchHit> hitIt = initialHits.iterator();
 		while (hitIt.hasNext() && i < feedbackDocs) {
 			SearchHit hit = hitIt.next();
+			hit.setQueryName(query.getTitle());
 			i++;
 			
 			// Get P(Q|D)
@@ -125,7 +142,13 @@ public class MultiExpansionRM1Builder implements ExpansionRM1Builder {
 			docScorers.put(expDocRMScorerWiki, params.get(DoubleEntityRunner.WIKI_WEIGHT));
 			DocScorer rmScorer = new InterpolatedDocScorer(docScorers);
 			
-			Set<String> terms = collectTerms(hit, stopper, 200);
+			Set<String> terms;
+			try {
+				terms = this.terms.get(new ExpansionKey(hit, stopper, 200));
+			} catch (ExecutionException e) {
+				System.err.println("Error getting terms");
+				terms = new HashSet<String>();
+			}
 			
 			for (String term : terms) {
 				termScores.addTerm(term, rmScorer.scoreTerm(term, hit));

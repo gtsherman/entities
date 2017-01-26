@@ -1,9 +1,15 @@
 package edu.gslis.entities.docscoring.expansion;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 import edu.gslis.evaluation.running.runners.EntityRunner;
 import edu.gslis.indexes.IndexWrapper;
@@ -19,7 +25,7 @@ import edu.gslis.searchhits.SearchHits;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
-public class SingleExpansionRM1Builder implements ExpansionRM1Builder {
+public class InterpolationSingleExpansionRM1Builder implements ExpansionRM1Builder {
 	
 	public static final int DEFAULT_FEEDBACK_DOCS = 20;
 	public static final int DEFAULT_FEEDBACK_TERMS = 20;
@@ -36,7 +42,17 @@ public class SingleExpansionRM1Builder implements ExpansionRM1Builder {
 	private DocScorer expansionScorer;
 	private QueryScorer expansionScorerQueryProb;
 	
-	public SingleExpansionRM1Builder(GQuery query,
+	private LoadingCache<ExpansionKey, Set<String>> terms = CacheBuilder.newBuilder()
+			.softValues()
+			.build(
+					new CacheLoader<ExpansionKey, Set<String>>() {
+						public Set<String> load(ExpansionKey key) throws Exception {
+							return collectTerms(key.getDoc(),
+									key.getStopper(), key.getLimit());
+						}
+					});
+	
+	public InterpolationSingleExpansionRM1Builder(GQuery query,
 			SearchHits initialHits, 
 			DocScorer docScorer, 
 			QueryScorer docScorerQueryProb,
@@ -60,7 +76,7 @@ public class SingleExpansionRM1Builder implements ExpansionRM1Builder {
 		setQuery(query, initialHits);
 	}
 	
-	public SingleExpansionRM1Builder(GQuery query,
+	public InterpolationSingleExpansionRM1Builder(GQuery query,
 			SearchHits initialHits,
 			DocScorer docScorer,
 			QueryScorer docScorerQueryProb,
@@ -118,7 +134,13 @@ public class SingleExpansionRM1Builder implements ExpansionRM1Builder {
 			DocScorer rmScorer = new InterpolatedDocScorer(docScorers);
 				
 			// Collect terms for this document and its expansion documents
-			Set<String> terms = collectTerms(d, stopper, 200);
+			Set<String> terms;
+			try {
+				terms = this.terms.get(new ExpansionKey(d, stopper, 200));
+			} catch (ExecutionException e) {
+				System.err.println("Error getting terms");
+				terms = new HashSet<String>();
+			}
 			
 			// Add this document's contribution to the overall RM
 			for (String term : terms) {

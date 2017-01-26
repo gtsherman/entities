@@ -6,6 +6,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -13,21 +14,24 @@ import java.util.Map;
 import edu.gslis.docscoring.support.CollectionStats;
 import edu.gslis.docscoring.support.IndexBackedCollectionStats;
 import edu.gslis.entities.docscoring.FileLookupDocScorer;
+import edu.gslis.entities.docscoring.QueryProbDatabaseLookupDocScorer;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
 import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
+import edu.gslis.readers.QueryProbabilityDataInterpreter;
+import edu.gslis.scoring.CachedDocScorer;
 import edu.gslis.scoring.DocScorer;
 import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.data.factory.DataSourceFactory;
+import edu.gslis.utils.data.interpreters.RelevanceModelDataInterpreter;
 import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
-import edu.gslis.utils.data.sources.DataSource;
+import edu.gslis.utils.data.sources.DatabaseDataSource;
 
 public class RunDoubleEntitySweep {
 	
@@ -47,39 +51,42 @@ public class RunDoubleEntitySweep {
 		CollectionStats cs = new IndexBackedCollectionStats();
 		cs.setStatSource(config.get("index"));
 		
-		int numEntities = 10;
-		if (config.get("num-entities") != null) {
-			numEntities = Integer.parseInt(config.get("num-entities"));
-		}
-		if (args.length > 2) {
-			numEntities = Integer.parseInt(args[2]);
-		}
-		
 		int numDocs = 1000;
 		if (config.get("num-docs") != null) {
 			numDocs = Integer.parseInt(config.get("num-docs"));
 		}
 		
-		DataSource data = DataSourceFactory.getDataSource(config.get("intial-hits"),
-				config.get("database"), SearchResultsDataInterpreter.DATA_NAME);
+		Connection dbCon = DatabaseDataSource.getConnection(config.get("database"));
+		
+		DatabaseDataSource data = new DatabaseDataSource(dbCon, SearchResultsDataInterpreter.DATA_NAME);
+		data.read();
 		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
 		SearchHitsBatch initialHitsBatch = dataInterpreter.build(data);
 		
-		String entityProbsPath = config.get("for-query-probs");
 		String outDir = config.get("double-entity-sweep-dir"); 
 
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("doubleEntity", outputWriter);
 		
-		DocScorer docScorer = new FileLookupDocScorer(entityProbsPath + 
-				File.separator + "docProbsNew");
-		DocScorer wikiDocScorer = new FileLookupDocScorer(entityProbsPath + 
-				File.separator + "entityProbsWikiNew." + numEntities);
-		DocScorer selfDocScorer = new FileLookupDocScorer(entityProbsPath + 
-				File.separator + "entityProbsSelfNew." + numEntities);
+		DatabaseDataSource expansionDataWiki = new DatabaseDataSource(
+				dbCon, "expansion_probabilities_wiki");
+		DatabaseDataSource expansionDataSelf = new DatabaseDataSource(
+				dbCon, "expansion_probabilities_self");
+
+		DocScorer docScorer = new CachedDocScorer(new FileLookupDocScorer(
+				config.get("document-probability-data-dir")));
+		DocScorer expansionDocScorerWiki = new CachedDocScorer(new QueryProbDatabaseLookupDocScorer(expansionDataWiki,
+				new QueryProbabilityDataInterpreter(RelevanceModelDataInterpreter.TERM_FIELD,
+						RelevanceModelDataInterpreter.SCORE_FIELD,
+						"QUERY", "DOCUMENT")));
+		DocScorer expansionDocScorerSelf = new CachedDocScorer(new QueryProbDatabaseLookupDocScorer(expansionDataSelf,
+				new QueryProbabilityDataInterpreter(RelevanceModelDataInterpreter.TERM_FIELD,
+						RelevanceModelDataInterpreter.SCORE_FIELD,
+						"QUERY", "DOCUMENT")));
+
 
 		QueryRunner runner = new DoubleEntityRunner(initialHitsBatch, stopper,
-				docScorer, selfDocScorer, wikiDocScorer);
+				docScorer, expansionDocScorerWiki, expansionDocScorerSelf);
 		
 		Map<String, Double> params = new HashMap<String, Double>();
 		

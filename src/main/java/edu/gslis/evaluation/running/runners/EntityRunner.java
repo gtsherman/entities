@@ -74,7 +74,7 @@ public class EntityRunner extends QueryRunner {
 		GQuery query = queryParams.getQuery();
 		int numResults = queryParams.getNumResults();
 		Map<String, Double> params = queryParams.getParams();
-
+		
 		query.applyStopper(stopper);
 		
 		SearchHits initialHits = getInitialHits(query);
@@ -84,6 +84,7 @@ public class EntityRunner extends QueryRunner {
 		Iterator<SearchHit> hitIt = initialHits.iterator();
 		while (hitIt.hasNext() && i < numResults) {
 			SearchHit doc = hitIt.next();
+			doc.setQueryName(query.getTitle());
 			i++;
 			
 			SearchHit newDoc = new SearchHit();

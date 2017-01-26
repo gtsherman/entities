@@ -15,9 +15,9 @@ import java.util.Set;
 
 import edu.gslis.docscoring.support.PrefetchedCollectionStats;
 import edu.gslis.entities.docscoring.CachedFileLookupDocScorer;
-import edu.gslis.entities.docscoring.DatabaseLookupDocScorer;
 import edu.gslis.entities.docscoring.FileLookupDocScorer;
-import edu.gslis.entities.docscoring.FileLookupQueryLikelihoodQueryScorer;
+import edu.gslis.entities.docscoring.QueryProbDatabaseLookupDocScorer;
+import edu.gslis.entities.docscoring.RMDatabaseLookupDocScorer;
 import edu.gslis.evaluation.running.runners.DoubleEntityRMRunner;
 import edu.gslis.evaluation.running.runners.DoubleEntityRunner;
 import edu.gslis.evaluation.running.runners.RMRunner;
@@ -27,23 +27,19 @@ import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
 import edu.gslis.queries.GQuery;
 import edu.gslis.readers.QueryProbabilityDataInterpreter;
-import edu.gslis.related_docs.DocumentClusterDataInterpreter;
-import edu.gslis.related_docs.DocumentClusterDataSource;
-import edu.gslis.related_docs.RelatedDocs;
+import edu.gslis.related_docs.term_collectors.DatabaseTermCollector;
+import edu.gslis.related_docs.term_collectors.MultiSourceTermCollector;
+import edu.gslis.related_docs.term_collectors.TermCollector;
 import edu.gslis.scoring.CachedDocScorer;
 import edu.gslis.scoring.DirichletDocScorer;
 import edu.gslis.scoring.DocScorer;
-import edu.gslis.scoring.queryscoring.QueryLikelihoodQueryScorer;
-import edu.gslis.scoring.queryscoring.QueryScorer;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
 import edu.gslis.utils.data.interpreters.RelevanceModelDataInterpreter;
 import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
-import edu.gslis.utils.data.sources.DataSource;
 import edu.gslis.utils.data.sources.DatabaseDataSource;
-import edu.gslis.utils.data.sources.FileDataSource;
 
 public class RunDoubleEntityRMSweep {
 	
@@ -52,15 +48,9 @@ public class RunDoubleEntityRMSweep {
 		config.read(args[0]);
 		
 		IndexWrapperIndriImpl index = new IndexWrapperIndriImpl(config.get("index"));
-		IndexWrapperIndriImpl wikiIndex = new IndexWrapperIndriImpl(config.get("wiki-index"));
 		Stopper stopper = new Stopper(config.get("stoplist"));
 		GQueries queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
-
-		FileDataSource ds = new DocumentClusterDataSource(new File(config.get("document-entities-file-self")));
-		RelatedDocs selfClusters = (new DocumentClusterDataInterpreter()).build(ds);
-		ds.read(new File(config.get("document-entities-file-wiki")));
-		RelatedDocs wikiClusters = (new DocumentClusterDataInterpreter()).build(ds);
 
 		Set<String> terms = new HashSet<String>();
 		Iterator<GQuery> queryIt = queries.iterator();
@@ -77,7 +67,8 @@ public class RunDoubleEntityRMSweep {
 		
 		Connection dbCon = DatabaseDataSource.getConnection(config.get("database"));
 		
-		DataSource data = new DatabaseDataSource(dbCon, SearchResultsDataInterpreter.DATA_NAME);
+		DatabaseDataSource data = new DatabaseDataSource(dbCon, SearchResultsDataInterpreter.DATA_NAME);
+		data.read();
 		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
 		SearchHitsBatch initialResults = dataInterpreter.build(data);
 
@@ -90,43 +81,51 @@ public class RunDoubleEntityRMSweep {
 		DatabaseDataSource expansionQueryDataWiki = new DatabaseDataSource(
 				dbCon, "expansion_probabilities_wiki");
 		
+		// Term collector
+		TermCollector termCollectorSelf = new DatabaseTermCollector(expansionDataSelf,
+				new RelevanceModelDataInterpreter(RelevanceModelDataInterpreter.SCORE_FIELD,
+						RelevanceModelDataInterpreter.TERM_FIELD,
+						"ORIGINAL_DOCUMENT"));
+		TermCollector termCollectorWiki = new DatabaseTermCollector(expansionDataWiki,
+				new RelevanceModelDataInterpreter(RelevanceModelDataInterpreter.SCORE_FIELD,
+						RelevanceModelDataInterpreter.TERM_FIELD,
+						"ORIGINAL_DOCUMENT"));
+		TermCollector termCollector = new MultiSourceTermCollector(termCollectorSelf, termCollectorWiki);
+		
 		// fbDocs scorer
 		DocScorer docScorer = new CachedDocScorer(new DirichletDocScorer(0, csSelf));
 		
 		// fbDocs query scorer
 		FileLookupDocScorer docScorerQueryProb = new CachedFileLookupDocScorer(config.get("document-probability-data-dir"));
-		QueryScorer docQueryScorer = new FileLookupQueryLikelihoodQueryScorer(docScorerQueryProb);
 		
 		// self expansion docs scorer
-		DocScorer expansionScorerSelf = new CachedDocScorer(new DatabaseLookupDocScorer(expansionDataSelf,
+		DocScorer expansionScorerSelf = new CachedDocScorer(new RMDatabaseLookupDocScorer(expansionDataSelf,
 				new RelevanceModelDataInterpreter(RelevanceModelDataInterpreter.SCORE_FIELD,
 						RelevanceModelDataInterpreter.TERM_FIELD,
 						"ORIGINAL_DOCUMENT")));
 		
 		// self expansion docs query scorer
-		DocScorer expansionScorerQueryProbSelf = new CachedDocScorer(new DatabaseLookupDocScorer(expansionQueryDataSelf,
+		DocScorer expansionScorerQueryProbSelf = new CachedDocScorer(new QueryProbDatabaseLookupDocScorer(expansionQueryDataSelf,
 				new QueryProbabilityDataInterpreter(RelevanceModelDataInterpreter.TERM_FIELD,
 						RelevanceModelDataInterpreter.SCORE_FIELD,
 						"QUERY", "DOCUMENT")));
-		QueryScorer expansionQueryScorerSelf = new QueryLikelihoodQueryScorer(expansionScorerQueryProbSelf);
 
 		// wiki expansion docs scorer
-		DocScorer expansionScorerWiki = new CachedDocScorer(new DatabaseLookupDocScorer(expansionDataWiki,
+		DocScorer expansionScorerWiki = new CachedDocScorer(new RMDatabaseLookupDocScorer(expansionDataWiki,
 				new RelevanceModelDataInterpreter(RelevanceModelDataInterpreter.SCORE_FIELD,
 						RelevanceModelDataInterpreter.TERM_FIELD,
 						"ORIGINAL_DOCUMENT")));
 		
 		// wiki expansion docs query scorer
-		DocScorer expansionScorerQueryProbWiki = new CachedDocScorer(new DatabaseLookupDocScorer(expansionQueryDataWiki,
+		DocScorer expansionScorerQueryProbWiki = new CachedDocScorer(new QueryProbDatabaseLookupDocScorer(expansionQueryDataWiki,
 				new QueryProbabilityDataInterpreter(RelevanceModelDataInterpreter.TERM_FIELD,
 						RelevanceModelDataInterpreter.SCORE_FIELD,
 						"QUERY", "DOCUMENT")));
-		QueryScorer expansionQueryScorerWiki = new QueryLikelihoodQueryScorer(expansionScorerQueryProbWiki);
 
 		DoubleEntityRMRunner runner = new DoubleEntityRMRunner(index, initialResults, stopper,
 				docScorer, expansionScorerSelf, expansionScorerWiki,
-				docQueryScorer, expansionQueryScorerSelf, expansionQueryScorerWiki,
-				selfClusters, wikiClusters, index, wikiIndex);
+				docScorerQueryProb, expansionScorerQueryProbSelf,
+				expansionScorerQueryProbWiki, termCollector);
 		
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("rm3", outputWriter);

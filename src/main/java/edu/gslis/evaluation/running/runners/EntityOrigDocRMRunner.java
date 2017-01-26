@@ -21,7 +21,6 @@ import edu.gslis.searchhits.SearchHits;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
-import edu.gslis.utils.retrieval.QueryResults;
 
 /**
  * Builds RM3 on the original document, which it uses to search with expansion.
@@ -94,11 +93,9 @@ public class EntityOrigDocRMRunner extends QueryRunner {
 		
 		SearchHits initialHits = getInitialHits(query);
 		
-		QueryResults queryResults = new QueryResults(query, initialHits);
-
 		RM1Builder rm1 = new FileLookupRM1Builder(rmDir);
 		RM3Builder rm3 = new RM3Builder();
-		FeatureVector rm3Vector = rm3.buildRelevanceModel(queryResults, rm1,
+		FeatureVector rm3Vector = rm3.buildRelevanceModel(query, initialHits, rm1,
 				params.get(RMRunner.ORIG_QUERY_WEIGHT));
 		rm3Vector.clip(20);
 		

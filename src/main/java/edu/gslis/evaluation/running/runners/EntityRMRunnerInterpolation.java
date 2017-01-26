@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import edu.gslis.entities.docscoring.expansion.ExpansionRM3Builder;
-import edu.gslis.entities.docscoring.expansion.SingleExpansionRM1Builder;
+import edu.gslis.entities.docscoring.expansion.InterpolationSingleExpansionRM1Builder;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.support.QueryParameters;
@@ -19,7 +19,7 @@ import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 
-public class EntityRMRunner extends QueryRunner {
+public class EntityRMRunnerInterpolation extends QueryRunner {
 	
 	private IndexWrapper targetIndex;
 	private SearchHitsBatch initialResultsBatch;
@@ -31,7 +31,7 @@ public class EntityRMRunner extends QueryRunner {
 	private RelatedDocs clusters;
 	private IndexWrapper expansionIndex;
 		
-	public EntityRMRunner(IndexWrapper targetIndex, SearchHitsBatch initialResultsBatch, Stopper stopper,
+	public EntityRMRunnerInterpolation(IndexWrapper targetIndex, SearchHitsBatch initialResultsBatch, Stopper stopper,
 			DocScorer docScorer, QueryScorer docScorerQueryProb, DocScorer expansionScorer, QueryScorer expansionScorerQueryProb,
 			RelatedDocs clusters, IndexWrapper expansionIndex) {
 		this.targetIndex = targetIndex;
@@ -102,7 +102,7 @@ public class EntityRMRunner extends QueryRunner {
 
 		SearchHits initialHits = getInitialHits(query);
 		
-		SingleExpansionRM1Builder rm1 = new SingleExpansionRM1Builder(query,
+		InterpolationSingleExpansionRM1Builder rm1 = new InterpolationSingleExpansionRM1Builder(query,
 				initialHits, docScorer, docScorerQueryProb,
 				expansionScorer, expansionScorerQueryProb,
 				clusters, expansionIndex,

@@ -1,12 +1,13 @@
 package edu.gslis.main;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.sql.Connection;
 import java.util.Iterator;
 
 import edu.gslis.entities.docscoring.FileLookupDocScorer;
+import edu.gslis.entities.docscoring.QueryProbDatabaseLookupDocScorer;
 import edu.gslis.eval.Qrels;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.evaluators.MAPEvaluator;
@@ -18,13 +19,16 @@ import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQueriesJsonImpl;
+import edu.gslis.readers.QueryProbabilityDataInterpreter;
+import edu.gslis.scoring.CachedDocScorer;
+import edu.gslis.scoring.DocScorer;
 import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.data.factory.DataSourceFactory;
+import edu.gslis.utils.data.interpreters.RelevanceModelDataInterpreter;
 import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
-import edu.gslis.utils.data.sources.DataSource;
+import edu.gslis.utils.data.sources.DatabaseDataSource;
 
 public class RunEntityValidation {
 	
@@ -33,7 +37,7 @@ public class RunEntityValidation {
 		config.read(args[0]);
 		
 		IndexWrapper index = new IndexWrapperIndriImpl(config.get("index"));
-
+		
 		Stopper stopper = new Stopper(config.get("stoplist"));
 
 		GQueries queries = new GQueriesJsonImpl();
@@ -41,34 +45,36 @@ public class RunEntityValidation {
 
 		Qrels qrels = new Qrels(config.get("qrels"), false, 1);
 
-		String forQueryProbs = config.get("for-query-probs");
 		String targetMetric = config.get("target-metric");
 		
-		String model = EntityRunner.WIKI_MODEL;
-		if (config.get("entity-model") != null) {
-			String entityModel = config.get("entity-model");
-			if (entityModel.equalsIgnoreCase(EntityRunner.SELF_MODEL)) {
-				model = EntityRunner.SELF_MODEL;
-			}
-		}
+		Connection dbCon = DatabaseDataSource.getConnection(config.get("database"));
 		
-		DataSource data = DataSourceFactory.getDataSource(config.get("intial-hits"),
-				config.get("database"), SearchResultsDataInterpreter.DATA_NAME);
+		DatabaseDataSource data = new DatabaseDataSource(dbCon, SearchResultsDataInterpreter.DATA_NAME);
+		data.read();
 		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
 		SearchHitsBatch initialHitsBatch = dataInterpreter.build(data);
-		
-		long seed = Long.parseLong(args[1]);
+
+		long seed = 1;
+		if (args.length > 1) {
+			seed = Long.parseLong(args[1]);
+		}
 		
 		Evaluator evaluator = new MAPEvaluator(qrels);
 		if (targetMetric.equalsIgnoreCase("ndcg")) {
 			evaluator = new NDCGEvaluator(qrels);
 		}
 
-		FileLookupDocScorer docScorer = new FileLookupDocScorer(forQueryProbs + 
-				File.separator + "docProbsNew");
-		FileLookupDocScorer expansionDocScorer = new FileLookupDocScorer(forQueryProbs + 
-				File.separator + "entityProbs" + model + "New.10");
-		
+		String expCol = config.get("expansion-collection");
+		DatabaseDataSource expansionData = new DatabaseDataSource(
+				dbCon, "expansion_probabilities_" + expCol);
+
+		DocScorer docScorer = new CachedDocScorer(new FileLookupDocScorer(
+				config.get("document-probability-data-dir")));
+		DocScorer expansionDocScorer = new CachedDocScorer(new QueryProbDatabaseLookupDocScorer(expansionData,
+				new QueryProbabilityDataInterpreter(RelevanceModelDataInterpreter.TERM_FIELD,
+						RelevanceModelDataInterpreter.SCORE_FIELD,
+						"QUERY", "DOCUMENT")));
+				
 		EntityRunner runner = new EntityRunner(initialHitsBatch, stopper, docScorer, expansionDocScorer);
 		KFoldValidator validator = new KFoldValidator(runner, 10);
 		

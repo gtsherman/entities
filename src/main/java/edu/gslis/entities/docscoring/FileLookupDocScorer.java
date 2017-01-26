@@ -32,7 +32,11 @@ public class FileLookupDocScorer implements DocScorer {
 	public double scoreTerm(String term, SearchHit doc) {
 		String docno = doc.getDocno();
 		if (!currentDoc.equals(docno)) {
-			build(docno);
+			if (doc.getQueryName() != null) {
+				build(doc.getQueryName() + File.separator + docno);
+			} else {
+				build(docno);
+			}
 			currentDoc = docno;
 		}
 		if (!termProbs.contains(term)) {

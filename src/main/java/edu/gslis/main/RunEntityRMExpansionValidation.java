@@ -1,16 +1,11 @@
 package edu.gslis.main;
 
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.sql.Connection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 
 import edu.gslis.docscoring.support.PrefetchedCollectionStats;
@@ -18,9 +13,12 @@ import edu.gslis.entities.docscoring.CachedFileLookupDocScorer;
 import edu.gslis.entities.docscoring.FileLookupDocScorer;
 import edu.gslis.entities.docscoring.QueryProbDatabaseLookupDocScorer;
 import edu.gslis.entities.docscoring.RMDatabaseLookupDocScorer;
+import edu.gslis.eval.Qrels;
+import edu.gslis.evaluation.evaluators.Evaluator;
+import edu.gslis.evaluation.evaluators.MAPEvaluator;
+import edu.gslis.evaluation.evaluators.NDCGEvaluator;
 import edu.gslis.evaluation.running.runners.EntityRMRunnerExpansion;
-import edu.gslis.evaluation.running.runners.EntityRunner;
-import edu.gslis.evaluation.running.runners.RMRunner;
+import edu.gslis.evaluation.validators.KFoldValidator;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueries;
@@ -40,9 +38,9 @@ import edu.gslis.utils.data.interpreters.RelevanceModelDataInterpreter;
 import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
 import edu.gslis.utils.data.sources.DatabaseDataSource;
 
-public class RunEntityRMSweep {
+public class RunEntityRMExpansionValidation {
 	
-	public static void main(String[] args) throws InterruptedException, IOException {
+	public static void main(String[] args) throws InterruptedException {
 		Configuration config = new SimpleConfiguration();
 		config.read(args[0]);
 		
@@ -53,6 +51,10 @@ public class RunEntityRMSweep {
 		GQueries queries = new GQueriesJsonImpl();
 		queries.read(config.get("queries"));
 
+		Qrels qrels = new Qrels(config.get("qrels"), false, 1);
+
+		String targetMetric = config.get("target-metric");
+		
 		Set<String> terms = new HashSet<String>();
 		Iterator<GQuery> queryIt = queries.iterator();
 		while (queryIt.hasNext()) {
@@ -63,9 +65,12 @@ public class RunEntityRMSweep {
 			}
 		}
 		PrefetchedCollectionStats cs = new PrefetchedCollectionStats(config.get("index"), terms);
-		
-		String outDir = config.get("single-entity-rm-sweep-dir"); 
 
+		Evaluator evaluator = new MAPEvaluator(qrels);
+		if (targetMetric.equalsIgnoreCase("ndcg")) {
+			evaluator = new NDCGEvaluator(qrels);
+		}
+		
 		Connection dbCon = DatabaseDataSource.getConnection(config.get("database"));
 		
 		DatabaseDataSource data = new DatabaseDataSource(dbCon, SearchResultsDataInterpreter.DATA_NAME);
@@ -73,10 +78,17 @@ public class RunEntityRMSweep {
 		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
 		SearchHitsBatch initialHitsBatch = dataInterpreter.build(data);
 
+		long seed = 1;
+		if (args.length > 1) {
+			seed = Long.parseLong(args[1]);
+		}
+		
+		String expCol = config.get("expansion-collection");
+
 		DatabaseDataSource expansionData = new DatabaseDataSource(
-				dbCon, "expansion_rms_" + config.get("expansion-collection"));
+				dbCon, "expansion_rms_" + expCol);
 		DatabaseDataSource expansionQueryData = new DatabaseDataSource(
-				dbCon, "expansion_probabilities_" + config.get("expansion-collection"));
+				dbCon, "expansion_probabilities_" + expCol);
 		
 		// Term collector
 		TermCollector termCollector = new DatabaseTermCollector(expansionData,
@@ -105,36 +117,23 @@ public class RunEntityRMSweep {
 		EntityRMRunnerExpansion runner = new EntityRMRunnerExpansion(index, initialHitsBatch,
 				stopper, docScorer, docScorerQueryProb, expansionScorer,
 				expansionScorerQueryProb, termCollector);
-
+		KFoldValidator validator = new KFoldValidator(runner, 10);
+		
+		SearchHitsBatch batchResults = validator.evaluate(seed, queries, evaluator);
+	
 		Writer outputWriter = new BufferedWriter(new OutputStreamWriter(System.out));
 		FormattedOutputTrecEval output = FormattedOutputTrecEval.getInstance("entityRM3", outputWriter);
-				
-		Map<String, Double> currentParams = new HashMap<String, Double>();
-		for (int origW = 0; origW <= 10; origW++) {
-			double origWeight = origW / 10.0;
-			currentParams.put(EntityRunner.DOCUMENT_WEIGHT, origWeight);
-
-			double expansionWeight = (10 - origW) / 10.0;
-			currentParams.put(EntityRunner.EXPANSION_WEIGHT, expansionWeight);
-				
-			for (int lambda = 0; lambda <= 10; lambda += 1) {
-				double lam = lambda / 10.0;
-				currentParams.put(RMRunner.ORIG_QUERY_WEIGHT, lam);
-
-				System.err.println("\t\tParameters: "+origWeight+" (doc), "+expansionWeight+" (expansion), "+lam+" (mixing)");
-				SearchHitsBatch batchResults = runner.run(queries, 1000, currentParams);
-				
-				String run = origWeight + "_" + expansionWeight + "_" + lam;
-				output.setRunId(run);
-				output.setWriter(new FileWriter(outDir + File.separator + run));
-	
-				Iterator<String> qit = batchResults.queryIterator();
-				while (qit.hasNext()) {
-					String query = qit.next();
-					output.write(batchResults.getSearchHits(query), query);			
-				}
-			}
+		
+		Iterator<String> qit = batchResults.queryIterator();
+		while (qit.hasNext()) {
+			String query = qit.next();
+			output.write(batchResults.getSearchHits(query), query);			
 		}
+	}
+	
+	public static double memUse() {
+		return ((double)((double)(Runtime.getRuntime().totalMemory()/1024)/1024)) - ((double)((double)(Runtime.getRuntime().freeMemory()/1024)/1024));
+		//return Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
 	}
 
 }

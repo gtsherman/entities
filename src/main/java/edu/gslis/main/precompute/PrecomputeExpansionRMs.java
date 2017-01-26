@@ -1,6 +1,7 @@
 package edu.gslis.main.precompute;
 
 import java.io.IOException;
+import java.sql.Connection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -19,10 +20,8 @@ import edu.gslis.textrepresentation.FeatureVector;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.data.factory.DataSourceFactory;
 import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
-import edu.gslis.utils.data.sources.DataSource;
-import edu.gslis.utils.retrieval.QueryResults;
+import edu.gslis.utils.data.sources.DatabaseDataSource;
 
 public class PrecomputeExpansionRMs {
 	
@@ -50,8 +49,10 @@ public class PrecomputeExpansionRMs {
 			numEntities = Integer.parseInt(config.get("num-entities"));
 		}
 		
-		DataSource data = DataSourceFactory.getDataSource(config.get("intial-hits"),
-				config.get("database"), SearchResultsDataInterpreter.DATA_NAME);
+		Connection dbCon = DatabaseDataSource.getConnection(config.get("database"));
+
+		DatabaseDataSource data = new DatabaseDataSource(dbCon, SearchResultsDataInterpreter.DATA_NAME);
+		data.read();
 		SearchResultsDataInterpreter dataInterpreter = new SearchResultsDataInterpreter(index);
 		SearchHitsBatch initialHitsBatch = dataInterpreter.build(data);
 		
@@ -69,11 +70,9 @@ public class PrecomputeExpansionRMs {
 				query.applyStopper(stopper);
 				query.getFeatureVector().clip(20);
 				
-				QueryResults queryResults = new QueryResults(query,
-						wikiIndex.runQuery(query, numEntities));
-				
 				RM1Builder rm1 = new StandardRM1Builder(numEntities, 20, cs);
-				FeatureVector rmVec = rm1.buildRelevanceModel(queryResults, stopper);
+				FeatureVector rmVec = rm1.buildRelevanceModel(query,
+						wikiIndex.runQuery(query, numEntities), stopper);
 				
 				System.out.println(rmVec.toString(10));
 				
