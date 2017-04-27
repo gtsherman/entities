@@ -31,6 +31,8 @@ public class DocumentClusterDataSource extends FileDataSource {
 		boolean success = true;
 		
 		try {
+			int origDocIndex = DocumentClusterDataInterpreter.ALL_FIELDS.indexOf(
+					DocumentClusterDataInterpreter.ORIGINAL_DOCUMENT);
 			int lineCount = 0;
 			String currentDoc = "";
 			Scanner scanner = new Scanner(file);
@@ -39,21 +41,13 @@ public class DocumentClusterDataSource extends FileDataSource {
 				lineCount++;
 
 				String[] parts = line.split(getDelimiter());
-				for (int i = 0; i < parts.length; i++) {
-					parts[i] = parts[i].trim();
-
-					// This line sucks
-					String fieldName = DocumentClusterDataInterpreter.ALL_FIELDS.get(i);
-					
-					if (fieldName.equals(DocumentClusterDataInterpreter.ORIGINAL_DOCUMENT)) {
-						if (!parts[i].equals(currentDoc)) {
-							lineCount = 1;
-							currentDoc = parts[i];
-						} else if (lineCount > limit) { // it is the same document as last line
-							continue; // skip this line, we've reached our limit for this document
-						}
-					}
+				if (!parts[origDocIndex].equals(currentDoc)) {
+					lineCount = 1;
+					currentDoc = parts[origDocIndex];
+				} else if (lineCount > limit) { // it is the same document as last line
+					continue; // skip this line, we've reached our limit for this document
 				}
+
 				addTuple(parts);
 			}
 			scanner.close();

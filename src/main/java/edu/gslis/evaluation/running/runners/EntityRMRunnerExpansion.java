@@ -169,7 +169,7 @@ public class EntityRMRunnerExpansion extends QueryRunner {
 		IndeterminateExpansionRM1Builder rm1 = new IndeterminateExpansionRM1Builder(query,
 				initialHits, docScorers, queryScorers, termCollector,
 				fbDocs, fbTerms);
-		return rm1.buildRelevanceModel(query, initialHits);
+		return rm1.buildRelevanceModel(query, initialHits, stopper);
 	}
 
 }

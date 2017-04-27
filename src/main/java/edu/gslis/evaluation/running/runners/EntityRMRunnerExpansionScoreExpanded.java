@@ -13,7 +13,6 @@ import edu.gslis.entities.docscoring.expansion.StoredRM1Builder;
 import edu.gslis.evaluation.evaluators.Evaluator;
 import edu.gslis.evaluation.running.QueryRunner;
 import edu.gslis.evaluation.running.runners.support.QueryParameters;
-import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.queries.GQueries;
 import edu.gslis.queries.GQuery;
 import edu.gslis.related_docs.term_collectors.TermCollector;
@@ -27,7 +26,6 @@ import edu.gslis.utils.Stopper;
 
 public class EntityRMRunnerExpansionScoreExpanded extends QueryRunner {
 	
-	private IndexWrapper targetIndex;
 	private SearchHitsBatch initialResultsBatch;
 	private Stopper stopper;
 	private DocScorer docScorer;
@@ -35,8 +33,6 @@ public class EntityRMRunnerExpansionScoreExpanded extends QueryRunner {
 	private DocScorer expansionScorer;
 	private DocScorer expansionScorerQueryProb;
 	private TermCollector termCollector;
-	
-	private EntityRunner rescorer;
 	
 	private LoadingCache<QueryParameters, FeatureVector> rm1s = CacheBuilder.newBuilder()
 			.softValues()
@@ -47,10 +43,9 @@ public class EntityRMRunnerExpansionScoreExpanded extends QueryRunner {
 						}
 					});
 		
-	public EntityRMRunnerExpansionScoreExpanded(IndexWrapper targetIndex, SearchHitsBatch initialResultsBatch, Stopper stopper,
+	public EntityRMRunnerExpansionScoreExpanded(SearchHitsBatch initialResultsBatch, Stopper stopper,
 			DocScorer docScorer, DocScorer docScorerQueryProb, DocScorer expansionScorer, DocScorer expansionScorerQueryProb,
 			TermCollector termCollector) {
-		this.targetIndex = targetIndex;
 		this.initialResultsBatch = initialResultsBatch;
 		this.stopper = stopper;
 		this.docScorer = docScorer;
@@ -58,9 +53,6 @@ public class EntityRMRunnerExpansionScoreExpanded extends QueryRunner {
 		this.expansionScorer = expansionScorer;
 		this.expansionScorerQueryProb = expansionScorerQueryProb;
 		this.termCollector = termCollector;
-
-		rescorer = new EntityRunner(initialResultsBatch, stopper,
-				docScorerQueryProb, expansionScorerQueryProb);
 	}
 
 	@Override
@@ -129,19 +121,18 @@ public class EntityRMRunnerExpansionScoreExpanded extends QueryRunner {
 		FeatureVector origQueryVec = query.getFeatureVector();
 		query.setFeatureVector(rm3Vector);
 		
-		// Rescore the new results with expansion
-		SearchHits results = rescorer.runQuery(queryParams);
 		
 		query.setFeatureVector(origQueryVec);
 		
-		return results;
+		//return results;
+		return new SearchHits();
 	}
 	
 	private SearchHits getInitialHits(GQuery query) {
 		return initialResultsBatch.getSearchHits(query);
 	}
 	
-	private FeatureVector computeRM1(QueryParameters queryParams) {
+	public FeatureVector computeRM1(QueryParameters queryParams) {
 		GQuery query = queryParams.getQuery();
 		Map<String, Double> params = queryParams.getParams();
 		
@@ -169,7 +160,7 @@ public class EntityRMRunnerExpansionScoreExpanded extends QueryRunner {
 		IndeterminateExpansionRM1Builder rm1 = new IndeterminateExpansionRM1Builder(query,
 				initialHits, docScorers, queryScorers, termCollector,
 				fbDocs, fbTerms);
-		return rm1.buildRelevanceModel(query, initialHits);
+		return rm1.buildRelevanceModel(query, initialHits, stopper);
 	}
 
 }

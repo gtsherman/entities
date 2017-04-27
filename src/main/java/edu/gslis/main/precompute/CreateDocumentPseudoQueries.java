@@ -7,7 +7,8 @@ import java.util.Set;
 import com.google.common.collect.Sets;
 
 import edu.gslis.indexes.IndexWrapperIndriImpl;
-import edu.gslis.queries.GQueriesJsonImpl;
+import edu.gslis.queries.GQueries;
+import edu.gslis.queries.GQueriesFactory;
 import edu.gslis.queries.GQuery;
 import edu.gslis.searchhits.SearchHit;
 import edu.gslis.searchhits.SearchHits;
@@ -28,8 +29,7 @@ public class CreateDocumentPseudoQueries {
 		if (config.get("stoplist") != null)
 			stopper = new Stopper(config.get("stoplist"));
 		
-		GQueriesJsonImpl queries = new GQueriesJsonImpl();
-		queries.read(config.get("queries"));	
+		GQueries queries = GQueriesFactory.getGQueries(config.get("queries"));
 		
 		int documentTerms = 20;
 		if (config.get("document-terms") != null) {
@@ -46,7 +46,8 @@ public class CreateDocumentPseudoQueries {
 		}*/
 		Set<SearchHit> docs = new HashSet<SearchHit>();
 		for (GQuery query : queries) {
-			SearchHits results = index.runQuery(query, 1000);
+			query.applyStopper(stopper);
+			SearchHits results = index.runQuery(query, 100);
 			docs.addAll(Sets.newHashSet(results.iterator()));
 		}
 		
@@ -63,6 +64,7 @@ public class CreateDocumentPseudoQueries {
 			// Get the stopped vector and clip to desired length
 			FeatureVector dv = query.getFeatureVector();
 			dv.clip(documentTerms);
+			dv.normalize();
 			
 			// Initial query output
 			System.out.println("<query>");

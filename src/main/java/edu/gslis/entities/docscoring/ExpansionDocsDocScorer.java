@@ -66,8 +66,10 @@ public class ExpansionDocsDocScorer implements DocScorer {
 		for (String docno : relatedDocs.keySet()) {
 			SearchHit expDoc = new IndexBackedSearchHit(expansionIndex);
 			expDoc.setDocno(docno);
-
+			
 			DocScorer expScorer = new DocScorerWithExpansionPrior(expDoc, dirichletScorer, relatedDocs);
+			//System.err.println("Term " + term + " in expansion doc " + docno + " (" + origDoc.getDocno() + "): " + expScorer.scoreTerm(term, expDoc));
+
 			total += expScorer.scoreTerm(term, expDoc);
 		}
 		

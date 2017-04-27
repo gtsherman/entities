@@ -21,6 +21,7 @@ public class IndexTermCollector implements TermCollector {
 	public FeatureVector getTerms(SearchHit doc, Stopper stopper) {
 		FeatureVector terms = new FeatureVector(null);
 		if (clusters.getDocsRelatedTo(doc) != null) {
+			System.err.println(clusters.getDocsRelatedTo(doc).size() + " docs related to " + doc.getDocno());
 			for (String docno : clusters.getDocsRelatedTo(doc).keySet()) {
 				SearchHit expansionHit = new IndexBackedSearchHit(index);
 				expansionHit.setDocno(docno);

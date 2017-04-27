@@ -11,14 +11,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import edu.gslis.entities.docscoring.ExpansionDocsDocScorer;
 import edu.gslis.entities.docscoring.FileLookupDocScorer;
-import edu.gslis.entities.docscoring.QueryProbDatabaseLookupDocScorer;
 import edu.gslis.evaluation.running.runners.EntityRunner;
 import edu.gslis.indexes.IndexWrapper;
 import edu.gslis.indexes.IndexWrapperIndriImpl;
 import edu.gslis.output.FormattedOutputTrecEval;
 import edu.gslis.queries.GQueriesJsonImpl;
-import edu.gslis.readers.QueryProbabilityDataInterpreter;
 import edu.gslis.related_docs.DocumentClusterDataInterpreter;
 import edu.gslis.related_docs.DocumentClusterDataSource;
 import edu.gslis.related_docs.RelatedDocs;
@@ -29,11 +28,10 @@ import edu.gslis.searchhits.SearchHitsBatch;
 import edu.gslis.utils.Stopper;
 import edu.gslis.utils.config.Configuration;
 import edu.gslis.utils.config.SimpleConfiguration;
-import edu.gslis.utils.data.interpreters.RelevanceModelDataInterpreter;
 import edu.gslis.utils.data.interpreters.SearchResultsDataInterpreter;
 import edu.gslis.utils.data.sources.DatabaseDataSource;
 
-public class RunEntitySweep {
+public class RunDifferingEntitySweep {
 	
 	public static void main(String[] args) throws IOException {
 		Configuration config = new SimpleConfiguration();
@@ -70,39 +68,41 @@ public class RunEntitySweep {
 		DatabaseDataSource expansionData = new DatabaseDataSource(
 				dbCon, "expansion_probabilities_" + expCol);
 
-		DocumentClusterDataInterpreter interpreter = new DocumentClusterDataInterpreter();
-		DocumentClusterDataSource clusterData = new DocumentClusterDataSource(new File(config.get("document-entities-file")));
-		RelatedDocs clusters = interpreter.build(clusterData);
+		for (int numEntities : new int[] {1, 5, 10, 50, 100}) {
+			DocumentClusterDataInterpreter interpreter = new DocumentClusterDataInterpreter();
+			DocumentClusterDataSource clusterData = new DocumentClusterDataSource(new File(config.get("document-entities-file")), numEntities);
+			RelatedDocs clusters = interpreter.build(clusterData);
 
-		DocScorer docScorer = new CachedDocScorer(new FileLookupDocScorer(
-				config.get("document-probability-data-dir")));
-		DocScorer expansionDocScorer = new CachedDocScorer(new QueryProbDatabaseLookupDocScorer(expansionData,
-				new QueryProbabilityDataInterpreter(RelevanceModelDataInterpreter.TERM_FIELD,
-						RelevanceModelDataInterpreter.SCORE_FIELD,
-						"QUERY", "DOCUMENT")));
-		//DocScorer expansionDocScorer = new CachedDocScorer(new ExpansionDocsDocScorer(wikiIndex, clusters));
-	
-		EntityRunner runner = new EntityRunner(initialHitsBatch, stopper, docScorer, expansionDocScorer);
-		Map<String, Double> params = new HashMap<String, Double>();
+			DocScorer docScorer = new CachedDocScorer(new FileLookupDocScorer(
+					config.get("document-probability-data-dir")));
+			/*DocScorer expansionDocScorer = new CachedDocScorer(new QueryProbDatabaseLookupDocScorer(expansionData,
+					new QueryProbabilityDataInterpreter(RelevanceModelDataInterpreter.TERM_FIELD,
+							RelevanceModelDataInterpreter.SCORE_FIELD,
+							"QUERY", "DOCUMENT")));*/
+			DocScorer expansionDocScorer = new CachedDocScorer(new ExpansionDocsDocScorer(wikiIndex, clusters));
+		
+			EntityRunner runner = new EntityRunner(initialHitsBatch, stopper, docScorer, expansionDocScorer);
+			Map<String, Double> params = new HashMap<String, Double>();
 
-		for (int origW = 0; origW <= 10; origW++) {
-			double origWeight = origW / 10.0;
-			params.put(EntityRunner.DOCUMENT_WEIGHT, origWeight);
-			
-			double wikiWeight = (10 - origW) / 10.0;
-			params.put(EntityRunner.EXPANSION_WEIGHT, wikiWeight);
+			for (int origW = 0; origW <= 10; origW++) {
+				double origWeight = origW / 10.0;
+				params.put(EntityRunner.DOCUMENT_WEIGHT, origWeight);
 				
-			String run = origWeight + "_" + wikiWeight;
-			output.setRunId(run);
-			output.setWriter(new FileWriter(outDir + File.separator + run));
+				double wikiWeight = (10 - origW) / 10.0;
+				params.put(EntityRunner.EXPANSION_WEIGHT, wikiWeight);
+					
+				String run = origWeight + "_" + wikiWeight;
+				output.setRunId(run);
+				output.setWriter(new FileWriter(outDir + File.separator + numEntities + File.separator + run));
+					
+				SearchHitsBatch batchResults = runner.run(queries, numDocs, params);
 				
-			SearchHitsBatch batchResults = runner.run(queries, numDocs, params);
-			
-			Iterator<String> qit = batchResults.queryIterator();
-			while (qit.hasNext()) {
-				String query = qit.next();
-				SearchHits hits = batchResults.getSearchHits(query);
-				output.write(hits, query);
+				Iterator<String> qit = batchResults.queryIterator();
+				while (qit.hasNext()) {
+					String query = qit.next();
+					SearchHits hits = batchResults.getSearchHits(query);
+					output.write(hits, query);
+				}
 			}
 		}
 	}
